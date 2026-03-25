@@ -1,27 +1,94 @@
-# 台股量化評分 UI
+# Stock Radar
 
-這個小工具把你剛剛的需求整合成可互動介面：
-- 輸入台股代號（例如 `2002,2542,00882`）
-- 自動抓取基本面（股票/ETF使用不同規則）
-- 自動抓取 1 年與 3 年歷史股價
-- 計算報酬、波動、最大回撤、Sharpe、趨勢
-- 可切換保守/平衡/積極風格
-- 提供圖表：3年價格、回撤、分數結構
-- 合併成最終量化分數並給出推薦
-- 代號可寫入瀏覽器 **localStorage**（預設在計算成功後記住，可關閉或清除）
+Quantitative scoring and recommendation system for Taiwan stocks (TWSE/TPEx), built with FastAPI + React + PostgreSQL.
 
-## 安裝與啟動
+[中文版 README](README.zh-TW.md)
 
-```bash
-pip install -r requirements.txt
-streamlit run app.py
+## Features
+
+- Enter Taiwan stock tickers to automatically fetch fundamentals and historical prices
+- Calculate returns, volatility, max drawdown, Sharpe ratio, and moving average trends
+- Fundamental scoring (different weights for stocks vs ETFs)
+- Technical indicator analysis (RSI, MACD, KD)
+- 3-day probability forecast (Monte Carlo simulation)
+- Backtest analysis (equal-weight portfolio vs 0050 benchmark)
+- Industry comparison (semiconductor, finance, traditional, electronic components, ETF)
+- Watchlist management
+- Alert condition configuration
+- Switchable investment styles: conservative / balanced / aggressive
+
+## Architecture
+
+```
+stock-radar/
+├── backend/          # FastAPI + SQLAlchemy + PostgreSQL
+│   ├── app/          # API (routers, services, repositories, models, schemas)
+│   └── core/         # Pure computation modules (metrics, scoring, technical, backtest)
+├── frontend/         # React + TypeScript + Ant Design + Recharts
+│   └── src/
+│       ├── api/      # API client
+│       ├── components/  # UI components (8 tabs)
+│       └── hooks/    # Zustand store
+└── infra/            # Docker Compose (PostgreSQL + Backend + Frontend)
 ```
 
-啟動後在瀏覽器開啟畫面，按下「開始計算」即可查詢。
+## Quick Start
 
-## 注意事項
+### Docker Compose (Recommended)
 
-- 需安裝 `streamlit-js-eval` 才能讀寫 localStorage；若未安裝，仍可使用預設代號
-- 資料來源為 Yahoo Finance，可能有延遲或暫時缺資料
-- 基本面分數改為自動估算，若個別欄位缺值會使用中性值回填
-- 本工具僅供研究與輔助，不構成投資建議
+```bash
+# 1. Create environment variables
+cp .env.example .env
+
+# 2. Start all services
+cd infra && docker compose up -d
+
+# 3. Open browser
+# Frontend: http://localhost:5173
+# Backend API docs: http://localhost:8000/docs
+```
+
+### Local Development
+
+```bash
+# Backend
+pip install -e "./backend"
+cd infra && docker compose up -d postgres    # Start DB only
+alembic -c backend/alembic.ini upgrade head  # Run migrations
+uvicorn backend.app.main:app --reload
+
+# Frontend
+cd frontend && npm install && npm run dev
+```
+
+## API Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/v1/scores/compute` | Compute scores |
+| POST | `/api/v1/technical/batch` | Batch technical indicators |
+| GET | `/api/v1/technical/{ticker}` | Single stock technical chart |
+| POST | `/api/v1/forecast/batch` | 3-day forecast |
+| POST | `/api/v1/backtest` | Backtest analysis |
+| GET | `/api/v1/charts/price` | Price / drawdown charts |
+| GET | `/api/v1/industries` | Industry list |
+| CRUD | `/api/v1/watchlists` | Watchlist management |
+| CRUD | `/api/v1/alerts` | Alert configuration |
+
+## Data Migration (from legacy Streamlit version)
+
+If you have a JSON export from the old localStorage:
+
+```bash
+python -m backend.scripts.migrate_localstorage export.json
+```
+
+## Notes
+
+- Data sourced from Yahoo Finance; may have delays or temporary gaps
+- Market data cached for 30 minutes; fundamental data cached for 24 hours
+- This tool is for research and reference only; it does not constitute investment advice
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).

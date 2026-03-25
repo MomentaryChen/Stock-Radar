@@ -1,16 +1,57 @@
 services:
   postgres:
-    image: postgres:18.3
-    container_name: postgres
+    image: postgres:16-alpine
+    container_name: stockradar-postgres
     restart: unless-stopped
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: postgres
+      POSTGRES_USER: ${POSTGRES_USER:-stockradar}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-stockradar}
+      POSTGRES_DB: ${POSTGRES_DB:-stockradar}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-stockradar}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    container_name: stockradar-backend
+    restart: unless-stopped
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    env_file: ../.env
+    environment:
+      DATABASE_URL: "postgresql+asyncpg://${POSTGRES_USER:-stockradar}:${POSTGRES_PASSWORD:-stockradar}@postgres:5432/${POSTGRES_DB:-stockradar}"
+      DATABASE_URL_SYNC: "postgresql://${POSTGRES_USER:-stockradar}:${POSTGRES_PASSWORD:-stockradar}@postgres:5432/${POSTGRES_DB:-stockradar}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: >
+      sh -c "alembic -c backend/alembic.ini upgrade head &&
+             uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload"
+    volumes:
+      - ..:/app
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: stockradar-frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+    environment:
+      VITE_API_URL: "http://localhost:${BACKEND_PORT:-8000}/api/v1"
+    depends_on:
+      - backend
+    volumes:
+      - ../frontend/src:/app/src
 
 volumes:
   postgres_data:

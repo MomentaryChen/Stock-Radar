@@ -24,5 +24,9 @@ Thumbs.db
 # Docker
 postgres_data/
 
+# Node
+node_modules/
+frontend/dist/
+
 # Claude
 .claude/settings.local.json

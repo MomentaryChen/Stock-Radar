@@ -28,7 +28,7 @@ class MarketDataRepo:
         return pd.Series(data=[float(c) for c in closes], index=pd.DatetimeIndex(dates), name="Close")
 
     async def get_ohlc(self, ticker: str, since: date) -> pd.DataFrame | None:
-        """Return cached OHLC from `since` to latest, or None if insufficient."""
+        """Return cached OHLC from `since` to latest, or None if all OHLC columns are present."""
         stmt = (
             select(
                 MarketDataCache.trade_date,
@@ -37,7 +37,13 @@ class MarketDataRepo:
                 MarketDataCache.low,
                 MarketDataCache.close,
             )
-            .where(MarketDataCache.ticker == ticker, MarketDataCache.trade_date >= since)
+            .where(
+                MarketDataCache.ticker == ticker,
+                MarketDataCache.trade_date >= since,
+                MarketDataCache.open.is_not(None),
+                MarketDataCache.high.is_not(None),
+                MarketDataCache.low.is_not(None),
+            )
             .order_by(MarketDataCache.trade_date)
         )
         result = await self.session.execute(stmt)
@@ -66,15 +72,17 @@ class MarketDataRepo:
         """Bulk upsert OHLC data from a pandas DataFrame."""
         now = datetime.now(timezone.utc)
         rows = []
+        has_ohlc = "Open" in df.columns and "High" in df.columns and "Low" in df.columns
+        has_volume = "Volume" in df.columns
         for dt, row in df.iterrows():
             rows.append({
                 "ticker": ticker,
                 "trade_date": dt.date() if hasattr(dt, "date") else dt,
-                "open": float(row.get("Open", 0)) if pd.notna(row.get("Open")) else None,
-                "high": float(row.get("High", 0)) if pd.notna(row.get("High")) else None,
-                "low": float(row.get("Low", 0)) if pd.notna(row.get("Low")) else None,
+                "open": float(row["Open"]) if has_ohlc and pd.notna(row["Open"]) else None,
+                "high": float(row["High"]) if has_ohlc and pd.notna(row["High"]) else None,
+                "low": float(row["Low"]) if has_ohlc and pd.notna(row["Low"]) else None,
                 "close": float(row["Close"]),
-                "volume": int(row["Volume"]) if "Volume" in row and pd.notna(row.get("Volume")) else None,
+                "volume": int(row["Volume"]) if has_volume and pd.notna(row["Volume"]) else None,
                 "fetched_at": now,
             })
         if not rows:

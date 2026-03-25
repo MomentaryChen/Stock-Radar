@@ -6,6 +6,8 @@ from backend.app.models.alert import Alert
 from backend.app.models.market_data_cache import MarketDataCache
 from backend.app.models.ticker_info_cache import TickerInfoCache
 from backend.app.models.industry import Industry
+from backend.app.models.accuracy_review import AccuracyReview
+from backend.app.models.news_sentiment import NewsSentiment
 
 __all__ = [
     "Base",
@@ -16,4 +18,6 @@ __all__ = [
     "MarketDataCache",
     "TickerInfoCache",
     "Industry",
+    "AccuracyReview",
+    "NewsSentiment",
 ]

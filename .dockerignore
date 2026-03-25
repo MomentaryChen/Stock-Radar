@@ -1,0 +1,30 @@
+# Dependencies
+frontend/node_modules
+__pycache__
+*.pyc
+.venv
+venv
+
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+*.swp
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Docker
+*.log
+postgres_data
+
+# Claude
+.claude
+
+# Env (injected via docker-compose)
+.env
+.env.local

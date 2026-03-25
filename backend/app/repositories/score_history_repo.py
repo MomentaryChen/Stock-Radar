@@ -22,6 +22,7 @@ class ScoreHistoryRepo:
         price_score: float | None,
         recommendation: str | None,
         breakdown: dict | None = None,
+        price_at_score: float | None = None,
     ) -> None:
         stmt = insert(ScoreHistory).values(
             user_id=user_id,
@@ -33,6 +34,7 @@ class ScoreHistoryRepo:
             price_score=price_score,
             recommendation=recommendation,
             breakdown=breakdown,
+            price_at_score=price_at_score,
         )
         stmt = stmt.on_conflict_do_update(
             constraint="uq_score_history",
@@ -42,6 +44,7 @@ class ScoreHistoryRepo:
                 "price_score": stmt.excluded.price_score,
                 "recommendation": stmt.excluded.recommendation,
                 "breakdown": stmt.excluded.breakdown,
+                "price_at_score": stmt.excluded.price_at_score,
             },
         )
         await self.session.execute(stmt)

@@ -68,7 +68,7 @@ class ScoringService:
                 errors.append(f"{t}: {exc}")
 
         if not metrics_list:
-            return ComputeScoresResponse(scores=[], fundamentals=[], triggered_alerts=[])
+            return ComputeScoresResponse(scores=[], fundamentals=[], triggered_alerts=[], errors=errors)
 
         scored_df = build_scores(metrics_list, fundamentals, profile)
 
@@ -84,6 +84,7 @@ class ScoringService:
                 fundamental=round(float(row["fundamental"]), 2),
                 price_score=round(float(row["price_score"]), 2),
                 recommendation=row["recommendation"],
+                price_at_score=round(float(row["last"]), 4),
             )
         await self.score_repo.flush()
 
@@ -114,6 +115,7 @@ class ScoringService:
             scores=scores,
             fundamentals=fundamental_details,
             triggered_alerts=triggered,
+            errors=errors,
         )
 
     async def _evaluate_alerts(

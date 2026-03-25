@@ -22,6 +22,7 @@ class ScoreHistory(Base):
     fundamental: Mapped[float | None] = mapped_column(Numeric(6, 2))
     price_score: Mapped[float | None] = mapped_column(Numeric(6, 2))
     recommendation: Mapped[str | None] = mapped_column(String(50))
+    price_at_score: Mapped[float | None] = mapped_column(Numeric(12, 4))
     breakdown: Mapped[dict | None] = mapped_column(JSONB)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now(), nullable=False)
 

@@ -15,6 +15,9 @@ PROFILE_WEIGHTS = {
     "保守": {"fundamental": 0.70, "price": 0.30},
     "平衡": {"fundamental": 0.60, "price": 0.40},
     "積極": {"fundamental": 0.45, "price": 0.55},
+    "conservative": {"fundamental": 0.70, "price": 0.30},
+    "balanced": {"fundamental": 0.60, "price": 0.40},
+    "aggressive": {"fundamental": 0.45, "price": 0.55},
 }
 
 

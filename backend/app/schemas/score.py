@@ -46,3 +46,4 @@ class ComputeScoresResponse(BaseModel):
     scores: list[ScoredTicker]
     fundamentals: list[FundamentalDetail]
     triggered_alerts: list[TriggeredAlert]
+    errors: list[str] = []

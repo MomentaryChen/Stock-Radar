@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from sqlalchemy import BigInteger, Date, Numeric, String, UniqueConstraint, func
+from sqlalchemy import BigInteger, Date, DateTime, Numeric, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from backend.app.models.base import Base
@@ -18,4 +18,4 @@ class MarketDataCache(Base):
     low: Mapped[float | None] = mapped_column(Numeric(12, 4))
     close: Mapped[float] = mapped_column(Numeric(12, 4), nullable=False)
     volume: Mapped[int | None] = mapped_column(BigInteger)
-    fetched_at: Mapped[datetime] = mapped_column(server_default=func.now(), nullable=False)
+    fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
