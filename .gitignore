@@ -1,15 +1,28 @@
+# Python
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-*.pyw
-*.pyz
-*.pywz
-*.pyzw
-*.pyzwz
-*.pyzwzw
-*.pyzwzwzw
-*.pyzwzwzwzw
-*.pyzwzwzwzwzw
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
 
+# Environment
+.env
+.env.*
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+postgres_data/
+
+# Claude
 .claude/settings.local.json
