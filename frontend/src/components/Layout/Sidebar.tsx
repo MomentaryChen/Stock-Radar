@@ -4,6 +4,7 @@ import { QuestionCircleOutlined } from "@ant-design/icons";
 import { useStore } from "../../hooks/useStore";
 import { computeScores } from "../../api/scores";
 import FaqDrawer from "./FaqDrawer";
+import { useT } from "../../i18n";
 
 const { Text } = Typography;
 
@@ -21,8 +22,10 @@ export default function Sidebar() {
     profile, setProfile,
     backtestMonths, setBacktestMonths,
     setScoreData, setLoading, loading,
+    language, setLanguage,
   } = useStore();
   const [faqOpen, setFaqOpen] = useState(false);
+  const t = useT();
 
   const handleCompute = async () => {
     const tickerList = tickers
@@ -43,32 +46,45 @@ export default function Sidebar() {
 
   return (
     <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 16, height: "100%" }}>
-      <Text strong style={{ fontSize: 16 }}>輸入設定</Text>
+      <Text strong style={{ fontSize: 16 }}>{t("sidebar.title")}</Text>
 
       <div>
-        <Text type="secondary">台股代號（逗號分隔）</Text>
-        <Input
-          value={tickers}
-          onChange={(e) => setTickers(e.target.value)}
-          placeholder="2330,0050,00882"
+        <Text type="secondary">{t("sidebar.language")}</Text>
+        <Select
+          value={language}
+          onChange={setLanguage}
+          style={{ width: "100%" }}
+          options={[
+            { label: "繁體中文", value: "zh-TW" },
+            { label: "English", value: "en" },
+          ]}
         />
       </div>
 
       <div>
-        <Text type="secondary">投資風格</Text>
+        <Text type="secondary">{t("sidebar.tickerLabel")}</Text>
+        <Input
+          value={tickers}
+          onChange={(e) => setTickers(e.target.value)}
+          placeholder={t("sidebar.tickerPlaceholder")}
+        />
+      </div>
+
+      <div>
+        <Text type="secondary">{t("sidebar.profileLabel")}</Text>
         <br />
         <Radio.Group value={profile} onChange={(e) => setProfile(e.target.value)}>
-          <Radio.Button value="conservative">保守</Radio.Button>
-          <Radio.Button value="balanced">平衡</Radio.Button>
-          <Radio.Button value="aggressive">積極</Radio.Button>
+          <Radio.Button value="conservative">{t("sidebar.profile.conservative")}</Radio.Button>
+          <Radio.Button value="balanced">{t("sidebar.profile.balanced")}</Radio.Button>
+          <Radio.Button value="aggressive">{t("sidebar.profile.aggressive")}</Radio.Button>
         </Radio.Group>
       </div>
 
       <div>
-        <Text type="secondary">產業快選</Text>
+        <Text type="secondary">{t("sidebar.industryLabel")}</Text>
         <Select
           style={{ width: "100%" }}
-          placeholder="選擇產業自動帶入"
+          placeholder={t("sidebar.industryPlaceholder")}
           allowClear
           onChange={(v) => v && setTickers(INDUSTRY_MAP[v])}
           options={Object.keys(INDUSTRY_MAP).map((k) => ({ label: k, value: k }))}
@@ -76,7 +92,7 @@ export default function Sidebar() {
       </div>
 
       <div>
-        <Text type="secondary">回測期間（月）</Text>
+        <Text type="secondary">{t("sidebar.backtestMonthsLabel")}</Text>
         <br />
         <Select
           value={backtestMonths}
@@ -91,7 +107,7 @@ export default function Sidebar() {
       </div>
 
       <Button type="primary" block loading={loading} onClick={handleCompute}>
-        開始計算
+        {t("sidebar.compute")}
       </Button>
 
       <div style={{ marginTop: "auto" }}>
@@ -103,7 +119,7 @@ export default function Sidebar() {
           onClick={() => setFaqOpen(true)}
           style={{ color: "#999" }}
         >
-          使用說明 & FAQ
+          {t("sidebar.faq")}
         </Button>
       </div>
 

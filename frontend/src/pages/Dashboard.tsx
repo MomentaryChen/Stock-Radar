@@ -11,12 +11,14 @@ import ChartsTab from "../components/Charts/ChartsTab";
 import AdvancedTab from "../components/Advanced/AdvancedTab";
 import AlertsTab from "../components/Alerts/AlertsTab";
 import NewsTab from "../components/News/NewsTab";
+import { useT } from "../i18n";
 
 const { Sider, Content, Footer } = Layout;
 
 export default function Dashboard() {
   const scoreData = useStore((s) => s.scoreData);
   const tickers = scoreData?.scores.map((s) => s.ticker) || [];
+  const t = useT();
 
   return (
     <Layout style={{ minHeight: "100vh" }}>
@@ -25,10 +27,10 @@ export default function Dashboard() {
       </Sider>
       <Layout>
         <Content style={{ padding: 24 }}>
-          <Typography.Title level={3}>台股量化評分與推薦</Typography.Title>
+          <Typography.Title level={3}>{t("app.title")}</Typography.Title>
 
           {!scoreData ? (
-            <Empty description="調整完設定後，按「開始計算」" />
+            <Empty description={t("app.empty")} />
           ) : (
             <>
               <AlertBanner alerts={scoreData.triggered_alerts} />
@@ -37,37 +39,37 @@ export default function Dashboard() {
                 items={[
                   {
                     key: "overview",
-                    label: "總覽",
+                    label: t("tabs.overview"),
                     children: <RankingTable scores={scoreData.scores} />,
                   },
                   {
                     key: "technical",
-                    label: "技術指標",
+                    label: t("tabs.technical"),
                     children: <TechnicalTab tickers={tickers} />,
                   },
                   {
                     key: "industry",
-                    label: "產業比較",
+                    label: t("tabs.industry"),
                     children: <IndustryTab />,
                   },
                   {
                     key: "forecast",
-                    label: "預測",
+                    label: t("tabs.forecast"),
                     children: <ForecastTab tickers={tickers} />,
                   },
                   {
                     key: "backtest",
-                    label: "回測",
+                    label: t("tabs.backtest"),
                     children: <BacktestTab tickers={tickers} />,
                   },
                   {
                     key: "charts",
-                    label: "圖表",
+                    label: t("tabs.charts"),
                     children: <ChartsTab tickers={tickers} />,
                   },
                   {
                     key: "advanced",
-                    label: "進階資料",
+                    label: t("tabs.advanced"),
                     children: (
                       <AdvancedTab
                         scores={scoreData.scores}
@@ -77,12 +79,12 @@ export default function Dashboard() {
                   },
                   {
                     key: "news",
-                    label: "新聞情緒",
+                    label: t("tabs.news"),
                     children: <NewsTab tickers={tickers} />,
                   },
                   {
                     key: "alerts",
-                    label: "警示設定",
+                    label: t("tabs.alerts"),
                     children: <AlertsTab tickers={tickers} />,
                   },
                 ]}
@@ -100,11 +102,9 @@ export default function Dashboard() {
             borderTop: "1px solid #f0f0f0",
           }}
         >
-          免責聲明：本系統資料來源為 Yahoo Finance，僅供研究與學習參考，不構成任何投資建議。
-          投資有風險，使用者應自行判斷並承擔所有投資決策之責任。
+          {t("footer.zh")}
           <br />
-          Disclaimer: Data sourced from Yahoo Finance for research and educational purposes only.
-          This does not constitute investment advice. Invest at your own risk.
+          {t("footer.en")}
         </Footer>
       </Layout>
     </Layout>

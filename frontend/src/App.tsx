@@ -1,7 +1,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ConfigProvider } from "antd";
 import zhTW from "antd/locale/zh_TW";
+import enUS from "antd/locale/en_US";
 import Dashboard from "./pages/Dashboard";
+import { useStore } from "./hooks/useStore";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -10,9 +12,10 @@ const queryClient = new QueryClient({
 });
 
 function App() {
+  const language = useStore((s) => s.language);
   return (
     <QueryClientProvider client={queryClient}>
-      <ConfigProvider locale={zhTW}>
+      <ConfigProvider locale={language === "en" ? enUS : zhTW}>
         <Dashboard />
       </ConfigProvider>
     </QueryClientProvider>

@@ -25,6 +25,8 @@ import {
 } from "recharts";
 import { fetchNews } from "../../api/news";
 import type { NewsItem } from "../../types";
+import { useStore } from "../../hooks/useStore";
+import { useT } from "../../i18n";
 
 interface Props {
   tickers: string[];
@@ -36,16 +38,12 @@ const COLORS: Record<string, string> = {
   bearish: "#ff4d4f",
 };
 
-const LABELS: Record<string, string> = {
-  bullish: "偏多",
-  neutral: "中性",
-  bearish: "偏空",
-};
-
 export default function NewsTab({ tickers }: Props) {
   const [selected, setSelected] = useState<string>("");
   const [items, setItems] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const language = useStore((s) => s.language);
+  const t = useT();
 
   useEffect(() => {
     if (tickers.length && !selected) {
@@ -79,11 +77,11 @@ export default function NewsTab({ tickers }: Props) {
 
   const chartData = useMemo(
     () => [
-      { name: "偏多", count: stats.bullish, key: "bullish" },
-      { name: "中性", count: stats.neutral, key: "neutral" },
-      { name: "偏空", count: stats.bearish, key: "bearish" },
+      { name: t("news.bullish"), count: stats.bullish, key: "bullish" },
+      { name: t("news.neutral"), count: stats.neutral, key: "neutral" },
+      { name: t("news.bearish"), count: stats.bearish, key: "bearish" },
     ],
-    [stats]
+    [stats, t]
   );
 
   const columns = [
@@ -102,7 +100,11 @@ export default function NewsTab({ tickers }: Props) {
         <Tag
           color={label === "bullish" ? "success" : label === "bearish" ? "error" : "default"}
         >
-          {LABELS[label] || label}
+          {label === "bullish"
+            ? t("news.bullish")
+            : label === "bearish"
+              ? t("news.bearish")
+              : t("news.neutral")}
         </Tag>
       ),
     },
@@ -152,7 +154,7 @@ export default function NewsTab({ tickers }: Props) {
       defaultSortOrder: "descend" as const,
       render: (v: string) => (
         <Typography.Text type="secondary">
-          {new Date(v).toLocaleString("zh-TW", {
+          {new Date(v).toLocaleString(language === "en" ? "en-US" : "zh-TW", {
             month: "2-digit",
             day: "2-digit",
             hour: "2-digit",
@@ -181,14 +183,14 @@ export default function NewsTab({ tickers }: Props) {
           onClick={() => loadNews(true)}
           loading={loading}
         >
-          重新抓取
+          {t("news.refresh")}
         </Button>
       </Space>
 
       {items.length === 0 ? (
         <Card>
           <Typography.Text type="secondary">
-            目前沒有該股票的新聞資料。
+            {t("news.noData")}
           </Typography.Text>
         </Card>
       ) : (
@@ -198,13 +200,17 @@ export default function NewsTab({ tickers }: Props) {
             <Col span={6}>
               <Card>
                 <Statistic
-                  title="整體情緒"
+                  title={t("news.overall")}
                   valueRender={() => (
                     <Tag
                       color={stats.overallLabel === "bullish" ? "success" : stats.overallLabel === "bearish" ? "error" : "default"}
                       style={{ fontSize: 16, padding: "2px 12px" }}
                     >
-                      {LABELS[stats.overallLabel]} ({stats.avg > 0 ? "+" : ""}{stats.avg.toFixed(3)})
+                      {(stats.overallLabel === "bullish"
+                        ? t("news.bullish")
+                        : stats.overallLabel === "bearish"
+                          ? t("news.bearish")
+                          : t("news.neutral"))} ({stats.avg > 0 ? "+" : ""}{stats.avg.toFixed(3)})
                     </Tag>
                   )}
                 />
@@ -213,7 +219,7 @@ export default function NewsTab({ tickers }: Props) {
             <Col span={6}>
               <Card>
                 <Statistic
-                  title="偏多新聞"
+                  title={t("news.bullishCount")}
                   value={stats.bullish}
                   suffix="則"
                   valueStyle={{ color: "#52c41a" }}
@@ -223,7 +229,7 @@ export default function NewsTab({ tickers }: Props) {
             <Col span={6}>
               <Card>
                 <Statistic
-                  title="偏空新聞"
+                  title={t("news.bearishCount")}
                   value={stats.bearish}
                   suffix="則"
                   valueStyle={{ color: "#ff4d4f" }}
@@ -232,19 +238,19 @@ export default function NewsTab({ tickers }: Props) {
             </Col>
             <Col span={6}>
               <Card>
-                <Statistic title="新聞總數" value={items.length} suffix="則" />
+                <Statistic title={t("news.total")} value={items.length} suffix="則" />
               </Card>
             </Col>
           </Row>
 
           {/* Section 3: Sentiment Distribution Chart */}
-          <Card style={{ marginBottom: 16 }} title="情緒分佈">
+          <Card style={{ marginBottom: 16 }} title={t("news.distribution")}>
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
                 <YAxis allowDecimals={false} />
-                <Tooltip formatter={(value) => [`${value ?? 0} 則`, "新聞數"] as const} />
+                <Tooltip formatter={(value) => [`${value ?? 0} 則`, t("news.tooltipCount")] as const} />
                 <Bar dataKey="count" radius={[4, 4, 0, 0]}>
                   {chartData.map((entry) => (
                     <Cell key={entry.key} fill={COLORS[entry.key]} />
@@ -265,7 +271,7 @@ export default function NewsTab({ tickers }: Props) {
 
           {/* Section 5: Disclaimer */}
           <Typography.Text type="secondary" style={{ marginTop: 8, display: "block" }}>
-            情緒分析基於關鍵字比對，僅供參考，不構成投資建議。
+            {t("news.disclaimer")}
           </Typography.Text>
         </>
       )}
