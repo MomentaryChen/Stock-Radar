@@ -10,10 +10,10 @@ if [ -z "${CERTBOT_EMAIL}" ]; then
 fi
 
 echo "[init-letsencrypt] Ensure nginx is up for ACME challenge..."
-docker compose up -d nginx
+docker compose --profile prod up -d nginx
 
 echo "[init-letsencrypt] Requesting certificate for ${DOMAIN_NAME}..."
-docker compose run --rm certbot certonly \
+docker compose --profile prod run --rm certbot certonly \
   --webroot -w /var/www/certbot \
   -d "${DOMAIN_NAME}" \
   --email "${CERTBOT_EMAIL}" \
@@ -21,6 +21,6 @@ docker compose run --rm certbot certonly \
   --no-eff-email
 
 echo "[init-letsencrypt] Reloading nginx..."
-docker compose exec nginx nginx -s reload
+docker compose --profile prod exec nginx nginx -s reload
 
 echo "[init-letsencrypt] Done."

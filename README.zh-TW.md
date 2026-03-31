@@ -61,6 +61,17 @@ Copy-Item .env.example .env
 chmod +x ./buildAndStart.sh && ./buildAndStart.sh
 ```
 
+```powershell
+# 方案 A-2：正式環境（啟用 nginx + certbot）
+$env:DEPLOY_ENV="prod"
+./buildAndStart.ps1
+```
+
+```bash
+# 方案 B-2：正式環境（啟用 nginx + certbot）
+DEPLOY_ENV=prod ./buildAndStart.sh
+```
+
 ```bash
 # 方案 C：手動執行 compose
 cd infra && docker compose up -d --build
@@ -73,7 +84,7 @@ cd infra && docker compose up -d --build
 
 ## Nginx + HTTPS（Let’s Encrypt 自動續約）
 
-目前 compose 已包含 `nginx` 與 `certbot`：
+`nginx` 與 `certbot` 只會在 `prod` profile 啟用（`DEPLOY_ENV=prod`）：
 
 - `http://stock-radar.ddns.net` 會自動轉址到 HTTPS
 - `https://stock-radar.ddns.net` 反向代理到前端

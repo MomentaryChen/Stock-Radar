@@ -9,10 +9,10 @@ if ([string]::IsNullOrWhiteSpace($certbotEmail)) {
 }
 
 Write-Host "[init-letsencrypt] Ensure nginx is up for ACME challenge..."
-docker compose up -d nginx
+docker compose --profile prod up -d nginx
 
 Write-Host "[init-letsencrypt] Requesting certificate for $domainName..."
-docker compose run --rm certbot certonly `
+docker compose --profile prod run --rm certbot certonly `
   --webroot -w /var/www/certbot `
   -d $domainName `
   --email $certbotEmail `
@@ -20,6 +20,6 @@ docker compose run --rm certbot certonly `
   --no-eff-email
 
 Write-Host "[init-letsencrypt] Reloading nginx..."
-docker compose exec nginx nginx -s reload
+docker compose --profile prod exec nginx nginx -s reload
 
 Write-Host "[init-letsencrypt] Done."

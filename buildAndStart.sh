@@ -19,15 +19,22 @@ printf '{"auths":{}}\n' > "${DOCKER_CONFIG}/config.json"
 # Avoid BuildKit metadata credential lookups on older headless hosts.
 export DOCKER_BUILDKIT=0
 export COMPOSE_DOCKER_CLI_BUILD=0
+DEPLOY_ENV="${DEPLOY_ENV:-local}"
 
 echo "[buildAndStart] Pulling base images..."
 docker --config "${DOCKER_CONFIG}" pull postgres:16-alpine
 docker --config "${DOCKER_CONFIG}" pull python:3.11-slim
 docker --config "${DOCKER_CONFIG}" pull node:20-alpine
-docker --config "${DOCKER_CONFIG}" pull nginx:1.27-alpine
-docker --config "${DOCKER_CONFIG}" pull certbot/certbot:latest
+if [ "${DEPLOY_ENV}" = "prod" ]; then
+  docker --config "${DOCKER_CONFIG}" pull nginx:1.27-alpine
+  docker --config "${DOCKER_CONFIG}" pull certbot/certbot:latest
+fi
 
 echo "[buildAndStart] Starting services with compose..."
-docker --config "${DOCKER_CONFIG}" compose up -d --build --remove-orphans
+if [ "${DEPLOY_ENV}" = "prod" ]; then
+  docker --config "${DOCKER_CONFIG}" compose --profile prod up -d --build --remove-orphans
+else
+  docker --config "${DOCKER_CONFIG}" compose up -d --build --remove-orphans
+fi
 
 echo "[buildAndStart] Done."

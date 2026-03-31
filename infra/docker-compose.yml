@@ -47,7 +47,7 @@ services:
     ports:
       - "${FRONTEND_PORT:-5173}:5173"
     environment:
-      VITE_API_URL: "https://stock-radar.ddns.net/api/v1"
+      VITE_API_URL: "${VITE_API_URL:-http://localhost:${BACKEND_PORT:-8000}/api/v1}"
     depends_on:
       - backend
     volumes:
@@ -57,6 +57,7 @@ services:
     image: nginx:1.27-alpine
     container_name: stockradar-nginx
     restart: unless-stopped
+    profiles: ["prod"]
     command: >
       /bin/sh -c "apk add --no-cache openssl &&
       mkdir -p /etc/letsencrypt/live/stock-radar.ddns.net &&
@@ -83,6 +84,7 @@ services:
     image: certbot/certbot:latest
     container_name: stockradar-certbot
     restart: unless-stopped
+    profiles: ["prod"]
     depends_on:
       - nginx
     command: >
