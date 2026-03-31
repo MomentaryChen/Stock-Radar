@@ -19,4 +19,13 @@ printf '{"auths":{}}\n' > "${DOCKER_CONFIG}/config.json"
 # Avoid BuildKit metadata credential lookups on older headless hosts.
 export DOCKER_BUILDKIT=0
 export COMPOSE_DOCKER_CLI_BUILD=0
-docker --config "${DOCKER_CONFIG}" compose up -d --build
+
+echo "[buildAndStart] Pulling base images..."
+docker --config "${DOCKER_CONFIG}" pull postgres:16-alpine
+docker --config "${DOCKER_CONFIG}" pull python:3.11-slim
+docker --config "${DOCKER_CONFIG}" pull node:20-alpine
+
+echo "[buildAndStart] Starting services with compose..."
+docker --config "${DOCKER_CONFIG}" compose up -d --build --remove-orphans
+
+echo "[buildAndStart] Done."
