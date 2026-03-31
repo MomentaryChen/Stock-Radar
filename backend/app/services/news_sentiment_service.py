@@ -4,6 +4,7 @@ import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
+from urllib.parse import quote
 from xml.etree import ElementTree as ET
 
 import requests
@@ -29,21 +30,33 @@ def _fetch_yfinance_news(ticker: str) -> list[dict]:
 
 
 def _fetch_yahoo_rss_news(ticker: str) -> list[dict]:
-    """Fetch Yahoo Finance RSS as fallback when yfinance returns empty."""
+    """Fetch Yahoo Finance RSS in both zh-TW and en-US locales."""
+    symbol = quote(ticker.strip().upper())
     endpoints = [
-        f"https://feeds.finance.yahoo.com/rss/2.0/headline?s={ticker}&region=US&lang=en-US",
-        f"https://finance.yahoo.com/rss/headline?s={ticker}",
+        # Traditional Chinese endpoints for Taiwan users.
+        f"https://feeds.finance.yahoo.com/rss/2.0/headline?s={symbol}&region=TW&lang=zh-TW",
+        f"https://feeds.finance.yahoo.com/rss/2.0/headline?s={symbol}&region=HK&lang=zh-Hant-HK",
+        # English endpoints for broader international coverage.
+        f"https://feeds.finance.yahoo.com/rss/2.0/headline?s={symbol}&region=US&lang=en-US",
+        # Generic fallback.
+        f"https://finance.yahoo.com/rss/headline?s={symbol}",
     ]
+
+    headers = {
+        "User-Agent": "Mozilla/5.0 (compatible; stock-radar/1.0)",
+        "Accept": "application/rss+xml, application/xml;q=0.9, */*;q=0.8",
+    }
+    merged_items: list[dict] = []
+    seen_keys: set[tuple[str, int | None]] = set()
 
     for url in endpoints:
         try:
-            response = requests.get(url, timeout=8)
+            response = requests.get(url, timeout=8, headers=headers)
             response.raise_for_status()
             root = ET.fromstring(response.text)
         except Exception:
             continue
 
-        parsed_items: list[dict] = []
         for item in root.findall(".//item"):
             title = (item.findtext("title") or "").strip()
             link = (item.findtext("link") or "").strip()
@@ -63,7 +76,11 @@ def _fetch_yahoo_rss_news(ticker: str) -> list[dict]:
             if not title or not link:
                 continue
 
-            parsed_items.append(
+            dedup_key = (link, publish_ts)
+            if dedup_key in seen_keys:
+                continue
+            seen_keys.add(dedup_key)
+            merged_items.append(
                 {
                     "title": title,
                     "link": link,
@@ -72,10 +89,7 @@ def _fetch_yahoo_rss_news(ticker: str) -> list[dict]:
                 }
             )
 
-        if parsed_items:
-            return parsed_items
-
-    return []
+    return merged_items
 
 
 def _build_news_ticker_candidates(ticker: str) -> list[str]:
@@ -147,39 +161,53 @@ class NewsSentimentService:
         ticker_candidates = _build_news_ticker_candidates(ticker)
         merged_raw_news: list[dict] = []
 
-        # Layer 1: yfinance API
-        for ticker_candidate in ticker_candidates:
+        async def _fetch_yfinance_candidate(ticker_candidate: str) -> list[dict]:
             try:
                 candidate_news = await asyncio.to_thread(_fetch_yfinance_news, ticker_candidate)
             except Exception:
                 logger.exception("Failed to fetch news for %s", ticker_candidate)
-                continue
+                return []
 
             if candidate_news:
-                merged_raw_news.extend(candidate_news)
                 logger.info(
                     "Fetched %d yfinance news items for %s via ticker %s",
                     len(candidate_news),
                     ticker,
                     ticker_candidate,
                 )
+            return candidate_news
 
-        # Layer 2: Yahoo RSS backup (always fetch and merge for better coverage)
-        for ticker_candidate in ticker_candidates:
+        async def _fetch_rss_candidate(ticker_candidate: str) -> list[dict]:
             try:
                 candidate_news = await asyncio.to_thread(_fetch_yahoo_rss_news, ticker_candidate)
             except Exception:
                 logger.exception("Failed to fetch RSS news for %s", ticker_candidate)
-                continue
+                return []
 
             if candidate_news:
-                merged_raw_news.extend(candidate_news)
                 logger.info(
                     "Fetched %d RSS news items for %s via ticker %s",
                     len(candidate_news),
                     ticker,
                     ticker_candidate,
                 )
+            return candidate_news
+
+        # Layer 1: yfinance API (parallel by ticker candidate)
+        yfinance_results = await asyncio.gather(
+            *(_fetch_yfinance_candidate(ticker_candidate) for ticker_candidate in ticker_candidates)
+        )
+        for candidate_news in yfinance_results:
+            if candidate_news:
+                merged_raw_news.extend(candidate_news)
+
+        # Layer 2: Yahoo RSS backup (parallel by ticker candidate)
+        rss_results = await asyncio.gather(
+            *(_fetch_rss_candidate(ticker_candidate) for ticker_candidate in ticker_candidates)
+        )
+        for candidate_news in rss_results:
+            if candidate_news:
+                merged_raw_news.extend(candidate_news)
 
         if merged_raw_news:
             # In-memory dedup before DB check to reduce repeated URL lookups.

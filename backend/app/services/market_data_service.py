@@ -92,3 +92,6 @@ class MarketDataService:
         self, ticker: str, name_zh: str | None, name_en: str | None, source: str
     ) -> None:
         await self.repo.upsert_ticker_profile(ticker, name_zh, name_en, source)
+
+    async def find_ticker_by_name(self, name: str) -> str | None:
+        return await self.repo.find_ticker_by_name(name)

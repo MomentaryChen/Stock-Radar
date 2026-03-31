@@ -1,7 +1,7 @@
 from datetime import date, datetime, timedelta, timezone
 
 import pandas as pd
-from sqlalchemy import select, delete
+from sqlalchemy import delete, func, or_, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -137,6 +137,23 @@ class MarketDataRepo:
 
     async def get_ticker_profile(self, ticker: str) -> TickerProfile | None:
         stmt = select(TickerProfile).where(TickerProfile.ticker == ticker)
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def find_ticker_by_name(self, name: str) -> str | None:
+        normalized = name.strip()
+        if not normalized:
+            return None
+        stmt = (
+            select(TickerProfile.ticker)
+            .where(
+                or_(
+                    func.lower(TickerProfile.name_zh) == normalized.lower(),
+                    func.lower(TickerProfile.name_en) == normalized.lower(),
+                )
+            )
+            .limit(1)
+        )
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 

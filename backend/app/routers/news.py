@@ -4,19 +4,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.app.dependencies import get_db
 from backend.app.schemas.news import NewsItem, NewsResponse
 from backend.app.services.news_sentiment_service import NewsSentimentService
+from backend.app.services.ticker_resolver_service import resolve_identifier_to_ticker
 
 router = APIRouter(prefix="/news", tags=["news"])
-
-def _normalize_ticker(raw: str) -> str:
-    p = raw.strip()
-    if not p:
-        return p
-    if p.endswith(".TW"):
-        return p
-    if p.isdigit():
-        return f"{p}.TW"
-    return p
-
 
 @router.get("/{ticker}", response_model=NewsResponse)
 async def get_news(
@@ -25,7 +15,10 @@ async def get_news(
     force_refresh: bool = Query(False),
     db: AsyncSession = Depends(get_db),
 ):
+    resolved_ticker = await resolve_identifier_to_ticker(db, ticker)
+    if not resolved_ticker:
+        return NewsResponse(ticker="", count=0, items=[])
     svc = NewsSentimentService(db)
-    rows = await svc.get_news(_normalize_ticker(ticker), limit=limit, force_refresh=force_refresh)
+    rows = await svc.get_news(resolved_ticker, limit=limit, force_refresh=force_refresh)
     items = [NewsItem.model_validate(r) for r in rows]
-    return NewsResponse(ticker=_normalize_ticker(ticker), count=len(items), items=items)
+    return NewsResponse(ticker=resolved_ticker, count=len(items), items=items)
