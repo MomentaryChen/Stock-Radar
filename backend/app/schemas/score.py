@@ -17,6 +17,9 @@ class ScoredTicker(BaseModel):
     price_score: float
     volume_score: float
     recommendation: str
+    decision_summary: str
+    decision_reasons: list[str]
+    decision_breakdown: dict[str, float]
     ret_1y: float
     ret_3y: float
     vol_1y: float

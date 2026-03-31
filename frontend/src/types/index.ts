@@ -9,6 +9,15 @@ export interface ScoredTicker {
   price_score: number;
   volume_score: number;
   recommendation: string;
+  decision_summary: string;
+  decision_reasons: string[];
+  decision_breakdown: {
+    fundamental_weight: number;
+    price_weight: number;
+    fundamental_contribution: number;
+    price_contribution: number;
+    total_score: number;
+  };
   ret_1y: number;
   ret_3y: number;
   vol_1y: number;

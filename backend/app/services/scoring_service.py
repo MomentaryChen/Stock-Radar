@@ -25,6 +25,7 @@ from backend.core.metrics import (
     calculate_volume_score,
 )
 from backend.core.scoring import build_scores, score_fundamental_from_info
+from backend.core.scoring import PROFILE_WEIGHTS
 from backend.core.technical import TechnicalSignals, compute_technical_signals
 
 DEFAULT_USER_ID = 1
@@ -52,6 +53,69 @@ def _resolve_localized_names(ticker: str, info: dict) -> tuple[str, str]:
 
 def _normalize_ticker_code(ticker: str) -> str:
     return ticker.split(".")[0].strip().upper()
+
+
+def _build_decision_explanation(row: pd.Series) -> tuple[str, list[str]]:
+    total = float(row["total_score"])
+    fundamental = float(row["fundamental"])
+    price_score = float(row["price_score"])
+    volume_score = float(row.get("volume_score", 50.0))
+    ret_1y = float(row["ret_1y"])
+    sharpe_1y = float(row["sharpe_1y"])
+    mdd_1y = float(row["mdd_1y"])
+
+    if total >= 65:
+        summary = "整體評分偏強，可列入優先觀察或核心配置。"
+    elif total >= 55:
+        summary = "整體評分中性，適合小部位分批布局。"
+    else:
+        summary = "整體評分偏弱，建議保守觀察並等待更佳訊號。"
+
+    reasons: list[str] = []
+    score_gap = fundamental - price_score
+    if score_gap >= 8:
+        reasons.append("基本面分數明顯高於價格動能，支撐長線配置邏輯。")
+    elif score_gap <= -8:
+        reasons.append("價格動能分數高於基本面，偏向題材或趨勢驅動。")
+    else:
+        reasons.append("基本面與價格動能分數接近，屬於較均衡的訊號組合。")
+
+    if volume_score >= 65:
+        reasons.append("成交量結構偏強，顯示近期市場參與度較高。")
+    elif volume_score <= 45:
+        reasons.append("成交量動能偏弱，追價前宜觀察量能是否回升。")
+    else:
+        reasons.append("成交量表現中性，短線需搭配其他訊號判斷。")
+
+    if sharpe_1y >= 0.8 and mdd_1y >= -0.25:
+        reasons.append("近一年風險調整後報酬表現穩健，回撤控制相對良好。")
+    elif ret_1y < 0 or sharpe_1y < 0:
+        reasons.append("近一年報酬或夏普比率偏弱，代表波動下效率不佳。")
+    else:
+        reasons.append("近一年報酬/風險比中等，需留意後續趨勢延續性。")
+
+    return summary, reasons
+
+
+def _build_decision_breakdown(row: pd.Series, profile: str) -> dict[str, float]:
+    weight = PROFILE_WEIGHTS[profile]
+    fundamental = float(row["fundamental"])
+    price_score = float(row["price_score"])
+    total_score = float(row["total_score"])
+
+    fundamental_weight = float(weight["fundamental"])
+    price_weight = float(weight["price"])
+    fundamental_contribution = fundamental * fundamental_weight
+    price_contribution = price_score * price_weight
+
+    # Keep values rounded for consistent frontend rendering.
+    return {
+        "fundamental_weight": round(fundamental_weight * 100.0, 2),
+        "price_weight": round(price_weight * 100.0, 2),
+        "fundamental_contribution": round(fundamental_contribution, 2),
+        "price_contribution": round(price_contribution, 2),
+        "total_score": round(total_score, 2),
+    }
 
 
 @dataclass
@@ -131,6 +195,8 @@ class ScoringService:
         # Build response
         scores = []
         for _, row in scored_df.iterrows():
+            decision_summary, decision_reasons = _build_decision_explanation(row)
+            decision_breakdown = _build_decision_breakdown(row, profile)
             scores.append(ScoredTicker(
                 ticker=row["ticker"],
                 name=ticker_names.get(row["ticker"], row["ticker"]),
@@ -142,6 +208,9 @@ class ScoringService:
                 price_score=round(float(row["price_score"]), 2),
                 volume_score=round(float(row.get("volume_score", 50.0)), 2),
                 recommendation=row["recommendation"],
+                decision_summary=decision_summary,
+                decision_reasons=decision_reasons,
+                decision_breakdown=decision_breakdown,
                 ret_1y=round(float(row["ret_1y"]), 4),
                 ret_3y=round(float(row["ret_3y"]), 4),
                 vol_1y=round(float(row["vol_1y"]), 4),
