@@ -88,6 +88,13 @@ chmod +x ./init-letsencrypt.sh
 DOMAIN_NAME=stock-radar.ddns.net CERTBOT_EMAIL=you@example.com ./init-letsencrypt.sh
 ```
 
+```powershell
+cd infra
+$env:DOMAIN_NAME="stock-radar.ddns.net"
+$env:CERTBOT_EMAIL="you@example.com"
+./init-letsencrypt.ps1
+```
+
 > 請先確認 DNS `stock-radar.ddns.net` 已正確指向你的主機公網 IP，且 80/443 埠可從外網連線。
 
 ## 本地開發（不跑整套 Docker）
