@@ -14,7 +14,6 @@ cd "${INFRA_PATH}"
 # to avoid credential helper failures (e.g. secretservice DBus).
 export DOCKER_CONFIG="${DOCKER_CONFIG:-/tmp/docker-nokeyring}"
 mkdir -p "${DOCKER_CONFIG}"
-if [ ! -f "${DOCKER_CONFIG}/config.json" ]; then
-  printf '{"auths":{}}\n' > "${DOCKER_CONFIG}/config.json"
-fi
+# Always write a helper-free config to prevent credential helper lookup.
+printf '{"auths":{}}\n' > "${DOCKER_CONFIG}/config.json"
 docker compose up -d --build
