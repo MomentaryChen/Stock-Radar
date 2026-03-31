@@ -30,6 +30,7 @@ export default function IndustryTab() {
   }, [selected, profile]);
 
   const chartData = scores.map((s) => ({
+    stock: `${s.name_zh || s.name_en || s.name || s.ticker} (${s.ticker})`,
     ticker: s.ticker,
     基本面: s.fundamental,
     價格分: s.price_score,
@@ -52,7 +53,7 @@ export default function IndustryTab() {
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="ticker" />
+              <XAxis dataKey="stock" interval={0} angle={-15} textAnchor="end" height={70} />
               <YAxis />
               <Tooltip />
               <Legend />

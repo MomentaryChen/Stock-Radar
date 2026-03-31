@@ -30,6 +30,7 @@ import { useT } from "../../i18n";
 
 interface Props {
   tickers: string[];
+  tickerNameMap: Record<string, string>;
 }
 
 const COLORS: Record<string, string> = {
@@ -38,7 +39,7 @@ const COLORS: Record<string, string> = {
   bearish: "#ff4d4f",
 };
 
-export default function NewsTab({ tickers }: Props) {
+export default function NewsTab({ tickers, tickerNameMap }: Props) {
   const [selected, setSelected] = useState<string>("");
   const [items, setItems] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -176,7 +177,10 @@ export default function NewsTab({ tickers }: Props) {
           onChange={setSelected}
           style={{ width: 160 }}
           placeholder="選擇股票"
-          options={tickers.map((t) => ({ label: t, value: t }))}
+          options={tickers.map((ticker) => ({
+            label: `${tickerNameMap[ticker] ?? ticker} (${ticker})`,
+            value: ticker,
+          }))}
         />
         <Button
           icon={<ReloadOutlined />}

@@ -80,3 +80,15 @@ class MarketDataService:
         info = await asyncio.to_thread(core_data.fetch_ticker_info, ticker)
         await self.repo.upsert_ticker_info(ticker, info)
         return info
+
+    async def get_ticker_profile(self, ticker: str) -> tuple[str | None, str | None, str | None]:
+        profile = await self.repo.get_ticker_profile(ticker)
+        if profile is None:
+            return None, None, None
+        await self.repo.touch_ticker_profile(ticker)
+        return profile.name_zh, profile.name_en, profile.source
+
+    async def upsert_ticker_profile(
+        self, ticker: str, name_zh: str | None, name_en: str | None, source: str
+    ) -> None:
+        await self.repo.upsert_ticker_profile(ticker, name_zh, name_en, source)

@@ -1,5 +1,6 @@
 """Scoring service: orchestrates data fetch, metrics computation, and score persistence."""
 
+import asyncio
 from datetime import date
 
 import pandas as pd
@@ -14,11 +15,35 @@ from backend.app.schemas.score import (
     TriggeredAlert,
 )
 from backend.app.services.market_data_service import MarketDataService
+from backend.core import data as core_data
 from backend.core.metrics import FundamentalMetrics, PriceMetrics, calculate_price_metrics
 from backend.core.scoring import build_scores, score_fundamental_from_info
 from backend.core.technical import TechnicalSignals, compute_technical_signals
 
 DEFAULT_USER_ID = 1
+
+
+def _has_cjk(text: str) -> bool:
+    return any("\u4e00" <= ch <= "\u9fff" for ch in text)
+
+
+def _resolve_localized_names(ticker: str, info: dict) -> tuple[str, str]:
+    candidates = [
+        str(info.get("longName") or ""),
+        str(info.get("shortName") or ""),
+        str(info.get("displayName") or ""),
+    ]
+    candidates = [c.strip() for c in candidates if c and c.strip()]
+    if not candidates:
+        return ticker, ticker
+
+    zh = next((c for c in candidates if _has_cjk(c)), candidates[0])
+    en = next((c for c in candidates if not _has_cjk(c)), candidates[0])
+    return zh, en
+
+
+def _normalize_ticker_code(ticker: str) -> str:
+    return ticker.split(".")[0].strip().upper()
 
 
 class ScoringService:
@@ -36,6 +61,9 @@ class ScoringService:
         errors: list[str] = []
 
         fundamentals = {}
+        ticker_names: dict[str, str] = {}
+        ticker_names_zh: dict[str, str] = {}
+        ticker_names_en: dict[str, str] = {}
 
         for t in tickers:
             try:
@@ -45,10 +73,34 @@ class ScoringService:
                 metrics_list.append(pm)
 
                 info = await self.mds.get_ticker_info(t)
+                cached_zh, cached_en, _ = await self.mds.get_ticker_profile(t)
+                if cached_zh and cached_en:
+                    name_zh, name_en = cached_zh, cached_en
+                else:
+                    name_zh, name_en = _resolve_localized_names(t, info)
+
+                    # Extra fallback for Chinese name from TWSE OpenAPI.
+                    if not _has_cjk(name_zh):
+                        twse_map = await asyncio.to_thread(core_data.fetch_twse_name_map)
+                        twse_name = twse_map.get(_normalize_ticker_code(t))
+                        if twse_name:
+                            name_zh = twse_name
+
+                    source = "twse_openapi" if _has_cjk(name_zh) else "yfinance"
+                    await self.mds.upsert_ticker_profile(
+                        ticker=t, name_zh=name_zh, name_en=name_en, source=source
+                    )
+                name = name_zh
+                ticker_names[t] = name
+                ticker_names_zh[t] = name_zh
+                ticker_names_en[t] = name_en
                 fm = score_fundamental_from_info(t, info)
                 fundamentals[t] = fm
                 fundamental_details.append(FundamentalDetail(
                     ticker=t,
+                    name=name,
+                    name_zh=name_zh,
+                    name_en=name_en,
                     quote_type=fm.quote_type,
                     pe=fm.pe,
                     pb=fm.pb,
@@ -93,6 +145,9 @@ class ScoringService:
         for _, row in scored_df.iterrows():
             scores.append(ScoredTicker(
                 ticker=row["ticker"],
+                name=ticker_names.get(row["ticker"], row["ticker"]),
+                name_zh=ticker_names_zh.get(row["ticker"], row["ticker"]),
+                name_en=ticker_names_en.get(row["ticker"], row["ticker"]),
                 last=round(float(row["last"]), 2),
                 total_score=round(float(row["total_score"]), 2),
                 fundamental=round(float(row["fundamental"]), 2),

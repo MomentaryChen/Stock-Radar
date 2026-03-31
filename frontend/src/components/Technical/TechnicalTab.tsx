@@ -11,9 +11,10 @@ const { Text } = Typography;
 
 interface Props {
   tickers: string[];
+  tickerNameMap: Record<string, string>;
 }
 
-export default function TechnicalTab({ tickers }: Props) {
+export default function TechnicalTab({ tickers, tickerNameMap }: Props) {
   const [signals, setSignals] = useState<TechnicalSignal[]>([]);
   const [chartData, setChartData] = useState<TechnicalChartData | null>(null);
   const [selected, setSelected] = useState<string>("");
@@ -36,7 +37,11 @@ export default function TechnicalTab({ tickers }: Props) {
   }, [selected]);
 
   const columns = [
-    { title: "代號", dataIndex: "ticker" },
+    {
+      title: "股票",
+      key: "stock",
+      render: (_: unknown, row: TechnicalSignal) => `${tickerNameMap[row.ticker] ?? row.ticker} (${row.ticker})`,
+    },
     { title: "RSI(14)", dataIndex: "rsi" },
     { title: "RSI訊號", dataIndex: "rsi_signal" },
     { title: "MACD", dataIndex: "macd" },
@@ -57,7 +62,10 @@ export default function TechnicalTab({ tickers }: Props) {
         <Select
           value={selected}
           onChange={setSelected}
-          options={tickers.map((t) => ({ label: t, value: t }))}
+          options={tickers.map((ticker) => ({
+            label: `${tickerNameMap[ticker] ?? ticker} (${ticker})`,
+            value: ticker,
+          }))}
           style={{ width: 160, marginLeft: 8 }}
         />
       </div>

@@ -8,6 +8,9 @@ class ComputeScoresRequest(BaseModel):
 
 class ScoredTicker(BaseModel):
     ticker: str
+    name: str
+    name_zh: str
+    name_en: str
     last: float
     total_score: float
     fundamental: float
@@ -25,6 +28,9 @@ class ScoredTicker(BaseModel):
 
 class FundamentalDetail(BaseModel):
     ticker: str
+    name: str
+    name_zh: str
+    name_en: str
     quote_type: str
     pe: float | None
     pb: float | None

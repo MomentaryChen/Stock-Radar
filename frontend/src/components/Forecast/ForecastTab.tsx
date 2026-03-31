@@ -6,9 +6,10 @@ import type { ForecastData } from "../../types";
 
 interface Props {
   tickers: string[];
+  tickerNameMap: Record<string, string>;
 }
 
-export default function ForecastTab({ tickers }: Props) {
+export default function ForecastTab({ tickers, tickerNameMap }: Props) {
   const [data, setData] = useState<ForecastData[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -19,7 +20,11 @@ export default function ForecastTab({ tickers }: Props) {
   }, [tickers]);
 
   const columns = [
-    { title: "代號", dataIndex: "ticker" },
+    {
+      title: "股票",
+      key: "stock",
+      render: (_: unknown, row: ForecastData) => `${tickerNameMap[row.ticker] ?? row.ticker} (${row.ticker})`,
+    },
     { title: "上漲機率", dataIndex: "p_up_3d", render: asPct },
     { title: "下跌機率", dataIndex: "p_down_3d", render: asPct },
     { title: "預期報酬", dataIndex: "exp_3d_ret", render: asPct },

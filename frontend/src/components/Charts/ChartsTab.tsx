@@ -8,9 +8,10 @@ const COLORS = ["#1890ff", "#52c41a", "#ff7a45", "#722ed1", "#eb2f96"];
 
 interface Props {
   tickers: string[];
+  tickerNameMap: Record<string, string>;
 }
 
-export default function ChartsTab({ tickers }: Props) {
+export default function ChartsTab({ tickers, tickerNameMap }: Props) {
   const [data, setData] = useState<PriceChartData | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -53,7 +54,7 @@ export default function ChartsTab({ tickers }: Props) {
           <XAxis dataKey="date" tick={false} />
           <YAxis />
           <Tooltip />
-          <Legend />
+          <Legend formatter={(value) => `${tickerNameMap[String(value)] ?? String(value)} (${String(value)})`} />
           {priceKeys.map((k, i) => (
             <Line key={k} type="monotone" dataKey={k} stroke={COLORS[i % COLORS.length]} dot={false} />
           ))}
@@ -67,7 +68,7 @@ export default function ChartsTab({ tickers }: Props) {
           <XAxis dataKey="date" tick={false} />
           <YAxis />
           <Tooltip />
-          <Legend />
+          <Legend formatter={(value) => `${tickerNameMap[String(value)] ?? String(value)} (${String(value)})`} />
           {ddKeys.map((k, i) => (
             <Line key={k} type="monotone" dataKey={k} stroke={COLORS[i % COLORS.length]} dot={false} />
           ))}

@@ -1,8 +1,10 @@
 """Yahoo Finance data fetching — pure functions, no Streamlit dependency."""
 
+from functools import lru_cache
 from typing import Dict
 
 import pandas as pd
+import requests
 import yfinance as yf
 
 
@@ -33,3 +35,32 @@ def fetch_ohlc(ticker: str, period: str) -> pd.DataFrame:
 
 def fetch_ticker_info(ticker: str) -> Dict:
     return yf.Ticker(ticker).info
+
+
+@lru_cache(maxsize=1)
+def fetch_twse_name_map() -> dict[str, str]:
+    """
+    Fetch Taiwan listed stock Chinese names from TWSE OpenAPI.
+    Returns a mapping {ticker: chinese_name}.
+    """
+    url = "https://openapi.twse.com.tw/v1/opendata/t187ap03_L"
+    resp = requests.get(url, timeout=20)
+    resp.raise_for_status()
+    rows = resp.json()
+    mapping: dict[str, str] = {}
+    for row in rows:
+        ticker = str(
+            row.get("公司代號")
+            or row.get("有價證券代號")
+            or row.get("股票代號")
+            or ""
+        ).strip()
+        name = str(
+            row.get("公司簡稱")
+            or row.get("公司名稱")
+            or row.get("有價證券名稱")
+            or ""
+        ).strip()
+        if ticker and name:
+            mapping[ticker] = name
+    return mapping

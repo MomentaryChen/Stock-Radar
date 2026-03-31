@@ -17,7 +17,14 @@ const { Sider, Content, Footer } = Layout;
 
 export default function Dashboard() {
   const scoreData = useStore((s) => s.scoreData);
+  const language = useStore((s) => s.language);
   const tickers = scoreData?.scores.map((s) => s.ticker) || [];
+  const tickerNameMap = Object.fromEntries(
+    (scoreData?.scores || []).map((s) => [
+      s.ticker,
+      language === "zh-TW" ? s.name_zh : s.name_en,
+    ])
+  );
   const t = useT();
 
   return (
@@ -45,7 +52,7 @@ export default function Dashboard() {
                   {
                     key: "technical",
                     label: t("tabs.technical"),
-                    children: <TechnicalTab tickers={tickers} />,
+                    children: <TechnicalTab tickers={tickers} tickerNameMap={tickerNameMap} />,
                   },
                   {
                     key: "industry",
@@ -55,17 +62,17 @@ export default function Dashboard() {
                   {
                     key: "forecast",
                     label: t("tabs.forecast"),
-                    children: <ForecastTab tickers={tickers} />,
+                    children: <ForecastTab tickers={tickers} tickerNameMap={tickerNameMap} />,
                   },
                   {
                     key: "backtest",
                     label: t("tabs.backtest"),
-                    children: <BacktestTab tickers={tickers} />,
+                    children: <BacktestTab tickers={tickers} tickerNameMap={tickerNameMap} />,
                   },
                   {
                     key: "charts",
                     label: t("tabs.charts"),
-                    children: <ChartsTab tickers={tickers} />,
+                    children: <ChartsTab tickers={tickers} tickerNameMap={tickerNameMap} />,
                   },
                   {
                     key: "advanced",
@@ -80,12 +87,12 @@ export default function Dashboard() {
                   {
                     key: "news",
                     label: t("tabs.news"),
-                    children: <NewsTab tickers={tickers} />,
+                    children: <NewsTab tickers={tickers} tickerNameMap={tickerNameMap} />,
                   },
                   {
                     key: "alerts",
                     label: t("tabs.alerts"),
-                    children: <AlertsTab tickers={tickers} />,
+                    children: <AlertsTab tickers={tickers} tickerNameMap={tickerNameMap} />,
                   },
                 ]}
               />

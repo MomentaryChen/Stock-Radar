@@ -11,4 +11,4 @@ router = APIRouter(prefix="/backtest", tags=["backtest"])
 @router.post("", response_model=BacktestResponse)
 async def run_backtest(req: BacktestRequest, db: AsyncSession = Depends(get_db)):
     svc = BacktestService(db)
-    return await svc.run(req.tickers, req.months)
+    return await svc.run(req)

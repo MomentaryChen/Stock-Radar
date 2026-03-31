@@ -5,9 +5,10 @@ import type { AlertConfig } from "../../types";
 
 interface Props {
   tickers: string[];
+  tickerNameMap: Record<string, string>;
 }
 
-export default function AlertsTab({ tickers }: Props) {
+export default function AlertsTab({ tickers, tickerNameMap }: Props) {
   const [alerts, setAlerts] = useState<AlertConfig[]>([]);
   const [selected, setSelected] = useState<string>(tickers[0] || "");
   const [form, setForm] = useState({
@@ -43,7 +44,11 @@ export default function AlertsTab({ tickers }: Props) {
   };
 
   const columns = [
-    { title: "代號", dataIndex: "ticker" },
+    {
+      title: "股票",
+      key: "stock",
+      render: (_: unknown, row: AlertConfig) => `${tickerNameMap[row.ticker] ?? row.ticker} (${row.ticker})`,
+    },
     { title: "總分>=", dataIndex: "score_above", render: (v: number | null) => v ?? "-" },
     { title: "總分<=", dataIndex: "score_below", render: (v: number | null) => v ?? "-" },
     { title: "股價>=", dataIndex: "price_above", render: (v: number | null) => v ?? "-" },
@@ -69,7 +74,10 @@ export default function AlertsTab({ tickers }: Props) {
         <div>
           <div>選擇股票</div>
           <Select value={selected} onChange={setSelected} style={{ width: 140 }}
-            options={tickers.map((t) => ({ label: t, value: t }))} />
+            options={tickers.map((ticker) => ({
+              label: `${tickerNameMap[ticker] ?? ticker} (${ticker})`,
+              value: ticker,
+            }))} />
         </div>
         <div><div>總分 &gt;=</div><InputNumber value={form.score_above} onChange={(v) => setForm({ ...form, score_above: v })} /></div>
         <div><div>總分 &lt;=</div><InputNumber value={form.score_below} onChange={(v) => setForm({ ...form, score_below: v })} /></div>

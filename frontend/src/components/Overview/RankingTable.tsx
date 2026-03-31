@@ -1,14 +1,35 @@
-import { Table, Tag } from "antd";
+import { Input, Table, Tag } from "antd";
+import { useMemo, useState } from "react";
 import type { ScoredTicker } from "../../types";
 import { asScore } from "../../utils/format";
+import { useStore } from "../../hooks/useStore";
 
 interface Props {
   scores: ScoredTicker[];
 }
 
 export default function RankingTable({ scores }: Props) {
+  const language = useStore((s) => s.language);
+  const getName = (row: ScoredTicker) => (language === "zh-TW" ? row.name_zh : row.name_en);
+  const [keyword, setKeyword] = useState("");
+  const filteredScores = useMemo(() => {
+    const q = keyword.trim().toLowerCase();
+    if (!q) return scores;
+    return scores.filter(
+      (row) =>
+        row.ticker.toLowerCase().includes(q) ||
+        row.name_zh.toLowerCase().includes(q) ||
+        row.name_en.toLowerCase().includes(q) ||
+        `${getName(row)} (${row.ticker})`.toLowerCase().includes(q)
+    );
+  }, [scores, keyword, language]);
+
   const columns = [
-    { title: "代號", dataIndex: "ticker", key: "ticker" },
+    {
+      title: "股票",
+      key: "stock",
+      render: (_: unknown, row: ScoredTicker) => `${getName(row)} (${row.ticker})`,
+    },
     {
       title: "現價",
       dataIndex: "last",
@@ -35,12 +56,21 @@ export default function RankingTable({ scores }: Props) {
   ];
 
   return (
-    <Table
-      dataSource={scores}
-      columns={columns}
-      rowKey="ticker"
-      pagination={false}
-      size="middle"
-    />
+    <>
+      <Input
+        placeholder="搜尋股票名稱或代號"
+        value={keyword}
+        onChange={(e) => setKeyword(e.target.value)}
+        style={{ marginBottom: 12, maxWidth: 320 }}
+        allowClear
+      />
+      <Table
+        dataSource={filteredScores}
+        columns={columns}
+        rowKey="ticker"
+        pagination={false}
+        size="middle"
+      />
+    </>
   );
 }

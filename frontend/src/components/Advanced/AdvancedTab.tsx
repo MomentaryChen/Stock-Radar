@@ -1,6 +1,7 @@
 import { Table, Typography } from "antd";
 import type { ScoredTicker, FundamentalDetail } from "../../types";
 import { asPct, asRatio } from "../../utils/format";
+import { useStore } from "../../hooks/useStore";
 
 interface Props {
   scores: ScoredTicker[];
@@ -8,8 +9,11 @@ interface Props {
 }
 
 export default function AdvancedTab({ scores, fundamentals }: Props) {
+  const language = useStore((s) => s.language);
+  const getStockName = (row: ScoredTicker | FundamentalDetail) =>
+    language === "zh-TW" ? row.name_zh : row.name_en;
   const metricCols = [
-    { title: "代號", dataIndex: "ticker" },
+    { title: "股票", key: "stock", render: (_: unknown, row: ScoredTicker) => `${getStockName(row)} (${row.ticker})` },
     { title: "基本面分", dataIndex: "fundamental", render: asRatio },
     { title: "價格分", dataIndex: "price_score", render: asRatio },
     { title: "報酬1Y", dataIndex: "ret_1y", render: asPct },
@@ -23,7 +27,7 @@ export default function AdvancedTab({ scores, fundamentals }: Props) {
   ];
 
   const fundCols = [
-    { title: "代號", dataIndex: "ticker" },
+    { title: "股票", key: "stock", render: (_: unknown, row: FundamentalDetail) => `${getStockName(row)} (${row.ticker})` },
     { title: "類型", dataIndex: "quote_type" },
     { title: "PE", dataIndex: "pe", render: asRatio },
     { title: "PB", dataIndex: "pb", render: asRatio },

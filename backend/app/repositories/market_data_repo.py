@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.models.market_data_cache import MarketDataCache
 from backend.app.models.ticker_info_cache import TickerInfoCache
+from backend.app.models.ticker_profile import TickerProfile
 
 
 class MarketDataRepo:
@@ -128,6 +129,51 @@ class MarketDataRepo:
                 "info_json": stmt.excluded.info_json,
                 "fetched_at": stmt.excluded.fetched_at,
             },
+        )
+        await self.session.execute(stmt)
+        await self.session.commit()
+
+    # --- Ticker Profile (name cache) ---
+
+    async def get_ticker_profile(self, ticker: str) -> TickerProfile | None:
+        stmt = select(TickerProfile).where(TickerProfile.ticker == ticker)
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def upsert_ticker_profile(
+        self, ticker: str, name_zh: str | None, name_en: str | None, source: str
+    ) -> None:
+        now = datetime.now(timezone.utc)
+        stmt = insert(TickerProfile).values(
+            ticker=ticker,
+            name_zh=name_zh,
+            name_en=name_en,
+            source=source,
+            updated_at=now,
+            last_used_at=now,
+        )
+        stmt = stmt.on_conflict_do_update(
+            index_elements=["ticker"],
+            set_={
+                "name_zh": stmt.excluded.name_zh,
+                "name_en": stmt.excluded.name_en,
+                "source": stmt.excluded.source,
+                "updated_at": stmt.excluded.updated_at,
+                "last_used_at": stmt.excluded.last_used_at,
+            },
+        )
+        await self.session.execute(stmt)
+        await self.session.commit()
+
+    async def touch_ticker_profile(self, ticker: str) -> None:
+        now = datetime.now(timezone.utc)
+        stmt = (
+            insert(TickerProfile)
+            .values(ticker=ticker, source="unknown", last_used_at=now, updated_at=now)
+            .on_conflict_do_update(
+                index_elements=["ticker"],
+                set_={"last_used_at": now},
+            )
         )
         await self.session.execute(stmt)
         await self.session.commit()

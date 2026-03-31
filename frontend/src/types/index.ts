@@ -1,5 +1,8 @@
 export interface ScoredTicker {
   ticker: string;
+  name: string;
+  name_zh: string;
+  name_en: string;
   last: number;
   total_score: number;
   fundamental: number;
@@ -17,6 +20,9 @@ export interface ScoredTicker {
 
 export interface FundamentalDetail {
   ticker: string;
+  name: string;
+  name_zh: string;
+  name_en: string;
   quote_type: string;
   pe: number | null;
   pb: number | null;
@@ -84,9 +90,20 @@ export interface BacktestResult {
   max_drawdown: number;
   sharpe: number;
   win_rate: number;
+  annualized_volatility: number;
+  total_rebalances: number;
+  average_turnover: number;
   monthly_returns: { month: string; ret: number }[];
   equity_curve: TimeSeriesPoint[];
   benchmark_curve: TimeSeriesPoint[];
+}
+
+export interface BacktestOptions {
+  strategy: "equal_weight" | "top_n_momentum";
+  rebalance: "monthly" | "weekly";
+  top_n: number;
+  lookback_days: number;
+  transaction_cost_bps: number;
 }
 
 export interface AlertConfig {
