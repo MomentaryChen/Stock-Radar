@@ -13,6 +13,7 @@ import AdvancedTab from "../components/Advanced/AdvancedTab";
 import AlertsTab from "../components/Alerts/AlertsTab";
 import NewsTab from "../components/News/NewsTab";
 import IndustryConfigTab from "../components/Industry/IndustryConfigTab";
+import UsageAdminTab from "../components/Admin/UsageAdminTab";
 import { useT } from "../i18n";
 
 const { Sider, Content, Footer } = Layout;
@@ -122,6 +123,11 @@ export default function Dashboard() {
                 key: "alerts",
                 label: t("tabs.alerts"),
                 children: renderScoreRequired(<AlertsTab tickers={tickers} tickerNameMap={tickerNameMap} />),
+              },
+              {
+                key: "adminUsage",
+                label: t("tabs.adminUsage"),
+                children: <UsageAdminTab />,
               },
                 ]}
               />

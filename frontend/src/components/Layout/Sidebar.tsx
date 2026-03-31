@@ -4,6 +4,7 @@ import { AppstoreAddOutlined, InboxOutlined, QuestionCircleOutlined } from "@ant
 import { useStore } from "../../hooks/useStore";
 import { computeScores } from "../../api/scores";
 import { fetchIndustries } from "../../api/industries";
+import { collectBrowserInfo, sendUsageHeartbeat } from "../../api/usage";
 import type { Industry } from "../../types";
 import FaqDrawer from "./FaqDrawer";
 import { useT } from "../../i18n";
@@ -27,6 +28,8 @@ export default function Sidebar({ industriesVersion = 0 }: SidebarProps) {
   const [toolHovered, setToolHovered] = useState(false);
   const [industries, setIndustries] = useState<Industry[]>([]);
   const [selectedIndustry, setSelectedIndustry] = useState<string | undefined>(undefined);
+  const [activeUsers, setActiveUsers] = useState<number | null>(null);
+  const [historicalUsers, setHistoricalUsers] = useState<number | null>(null);
   const t = useT();
 
   useEffect(() => {
@@ -40,6 +43,37 @@ export default function Sidebar({ industriesVersion = 0 }: SidebarProps) {
       })
       .catch((e) => console.error("Failed to load industries:", e));
   }, [industriesVersion, setTickers]);
+
+  useEffect(() => {
+    const storageKey = "stock-radar.client-id";
+    const current = localStorage.getItem(storageKey);
+    const clientId = current ?? crypto.randomUUID();
+    if (!current) {
+      localStorage.setItem(storageKey, clientId);
+    }
+
+    let disposed = false;
+    const sendHeartbeat = async () => {
+      try {
+        const res = await sendUsageHeartbeat(clientId, collectBrowserInfo());
+        if (!disposed) {
+          setActiveUsers(res.active_users);
+          setHistoricalUsers(res.historical_users);
+        }
+      } catch (e) {
+        console.error("Failed to send usage heartbeat:", e);
+      }
+    };
+
+    void sendHeartbeat();
+    const timer = window.setInterval(() => {
+      void sendHeartbeat();
+    }, 30_000);
+    return () => {
+      disposed = true;
+      window.clearInterval(timer);
+    };
+  }, []);
 
   const handleCompute = async () => {
     const tickerList = tickers
@@ -131,6 +165,16 @@ export default function Sidebar({ industriesVersion = 0 }: SidebarProps) {
       <Button type="primary" block loading={loading} onClick={handleCompute}>
         {t("sidebar.compute")}
       </Button>
+      {activeUsers !== null && (
+        <Text type="secondary">
+          {t("sidebar.activeUsers")}: {activeUsers}
+        </Text>
+      )}
+      {historicalUsers !== null && (
+        <Text type="secondary">
+          {t("sidebar.historicalUsers")}: {historicalUsers}
+        </Text>
+      )}
 
       <Divider style={{ margin: "4px 0" }} />
       <Text type="secondary" strong>{t("sidebar.section.tools")}</Text>

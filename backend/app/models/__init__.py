@@ -9,6 +9,7 @@ from backend.app.models.industry import Industry
 from backend.app.models.accuracy_review import AccuracyReview
 from backend.app.models.news_sentiment import NewsSentiment
 from backend.app.models.ticker_profile import TickerProfile
+from backend.app.models.active_client import ActiveClient
 
 __all__ = [
     "Base",
@@ -22,4 +23,5 @@ __all__ = [
     "AccuracyReview",
     "NewsSentiment",
     "TickerProfile",
+    "ActiveClient",
 ]

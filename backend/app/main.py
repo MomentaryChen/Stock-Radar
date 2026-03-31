@@ -4,7 +4,19 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.app.config import settings
-from backend.app.routers import accuracy, alerts, backtest, charts, forecast, industries, news, scores, technical, watchlists
+from backend.app.routers import (
+    accuracy,
+    alerts,
+    backtest,
+    charts,
+    forecast,
+    industries,
+    news,
+    scores,
+    technical,
+    usage,
+    watchlists,
+)
 from backend.app.scheduler import start_scheduler, stop_scheduler
 
 
@@ -41,6 +53,7 @@ app.include_router(alerts.router, prefix="/api/v1")
 app.include_router(industries.router, prefix="/api/v1")
 app.include_router(accuracy.router, prefix="/api/v1")
 app.include_router(news.router, prefix="/api/v1")
+app.include_router(usage.router, prefix="/api/v1")
 
 
 @app.get("/health")

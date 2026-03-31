@@ -13,6 +13,8 @@ A quantitative scoring and analytics platform for Taiwan stocks (TWSE/TPEx), bui
 - Portfolio backtest (equal-weight portfolio vs 0050 benchmark)
 - Industry comparison, watchlist management, and alert configuration
 - Switchable investment styles: conservative / balanced / aggressive
+- Usage analytics (active users, historical viewers, browser metadata)
+- Token-protected admin usage dashboard
 
 ## Project Structure
 
@@ -23,7 +25,8 @@ stock-radar/
 │   └── core/           # Pure calculation modules
 ├── frontend/           # React + TypeScript + Vite + Ant Design
 ├── infra/              # Docker Compose for postgres/backend/frontend
-└── buildAndStart.ps1   # One-command Docker startup script
+├── buildAndStart.ps1   # One-command Docker startup script (Windows)
+└── buildAndStart.sh    # One-command Docker startup script (Ubuntu/Linux)
 ```
 
 ## Prerequisites
@@ -54,7 +57,12 @@ Copy-Item .env.example .env
 ```
 
 ```bash
-# Option B: manual compose command
+# Option B: Ubuntu/Linux script
+chmod +x ./buildAndStart.sh && ./buildAndStart.sh
+```
+
+```bash
+# Option C: manual compose command
 cd infra && docker compose up -d --build
 ```
 
@@ -116,6 +124,21 @@ alembic -c backend/alembic.ini upgrade head
 | GET | `/api/v1/industries` | Industry list |
 | CRUD | `/api/v1/watchlists` | Watchlist management |
 | CRUD | `/api/v1/alerts` | Alert configuration |
+| POST | `/api/v1/usage/heartbeat` | Track active client heartbeat |
+| GET | `/api/v1/usage/admin/summary` | Admin usage summary (token required) |
+| GET | `/api/v1/usage/admin/clients` | Admin usage clients list (token required) |
+
+## Usage Admin Token
+
+To enable the usage admin APIs and frontend admin tab, configure these values in `.env`:
+
+```env
+USAGE_ADMIN_TOKEN=please-change-this-token
+USAGE_ADMIN_CLIENTS_LIMIT=100
+```
+
+- `USAGE_ADMIN_TOKEN`: required for `/api/v1/usage/admin/*` APIs
+- `USAGE_ADMIN_CLIENTS_LIMIT`: max rows returned by `/api/v1/usage/admin/clients`
 
 ## Data Migration (Legacy Streamlit)
 

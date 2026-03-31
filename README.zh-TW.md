@@ -13,6 +13,8 @@
 - 回測分析（等權組合 vs 0050 基準）
 - 產業比較、自選股管理、警示條件設定
 - 可切換保守 / 平衡 / 積極投資風格
+- 使用流量統計（目前使用人數、歷史瀏覽人數、瀏覽器資訊）
+- 需 token 保護的流量管理後台頁面
 
 ## 專案結構
 
@@ -23,7 +25,8 @@ stock-radar/
 │   └── core/           # 純運算模組
 ├── frontend/           # React + TypeScript + Vite + Ant Design
 ├── infra/              # postgres/backend/frontend 的 Docker Compose
-└── buildAndStart.ps1   # 一鍵啟動 Docker 腳本
+├── buildAndStart.ps1   # 一鍵啟動 Docker 腳本（Windows）
+└── buildAndStart.sh    # 一鍵啟動 Docker 腳本（Ubuntu/Linux）
 ```
 
 ## 先決條件
@@ -54,7 +57,12 @@ Copy-Item .env.example .env
 ```
 
 ```bash
-# 方案 B：手動執行 compose
+# 方案 B：Ubuntu/Linux 腳本
+chmod +x ./buildAndStart.sh && ./buildAndStart.sh
+```
+
+```bash
+# 方案 C：手動執行 compose
 cd infra && docker compose up -d --build
 ```
 
@@ -116,6 +124,21 @@ alembic -c backend/alembic.ini upgrade head
 | GET | `/api/v1/industries` | 產業列表 |
 | CRUD | `/api/v1/watchlists` | 自選股管理 |
 | CRUD | `/api/v1/alerts` | 警示條件管理 |
+| POST | `/api/v1/usage/heartbeat` | 回報活躍使用心跳 |
+| GET | `/api/v1/usage/admin/summary` | 流量摘要（需 token） |
+| GET | `/api/v1/usage/admin/clients` | 流量明細列表（需 token） |
+
+## 流量管理 Token 設定
+
+若要啟用流量管理 API 與前端管理分頁，請在 `.env` 設定：
+
+```env
+USAGE_ADMIN_TOKEN=please-change-this-token
+USAGE_ADMIN_CLIENTS_LIMIT=100
+```
+
+- `USAGE_ADMIN_TOKEN`：`/api/v1/usage/admin/*` 驗證使用
+- `USAGE_ADMIN_CLIENTS_LIMIT`：`/api/v1/usage/admin/clients` 回傳筆數上限
 
 ## 資料遷移（舊版 Streamlit）
 

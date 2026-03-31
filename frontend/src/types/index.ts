@@ -154,3 +154,20 @@ export interface NewsResponse {
   count: number;
   items: NewsItem[];
 }
+
+export interface UsageClient {
+  client_id: string;
+  first_seen_at: string;
+  last_seen_at: string;
+  user_agent: string | null;
+  browser_language: string | null;
+  platform: string | null;
+  timezone: string | null;
+  screen_width: number | null;
+  screen_height: number | null;
+  viewport_width: number | null;
+  viewport_height: number | null;
+  current_path: string | null;
+  referrer: string | null;
+  ip_address: string | null;
+}

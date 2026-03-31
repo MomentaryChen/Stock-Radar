@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     cors_origin_regex: str | None = r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$"
     default_benchmark: str = "0050.TW"
     risk_free_rate: float = 0.015
+    usage_admin_token: str = ""
+    usage_admin_clients_limit: int = 100
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
