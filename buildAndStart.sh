@@ -16,4 +16,7 @@ export DOCKER_CONFIG="${DOCKER_CONFIG:-/tmp/docker-nokeyring}"
 mkdir -p "${DOCKER_CONFIG}"
 # Always write a helper-free config to prevent credential helper lookup.
 printf '{"auths":{}}\n' > "${DOCKER_CONFIG}/config.json"
-docker compose up -d --build
+# Avoid BuildKit metadata credential lookups on older headless hosts.
+export DOCKER_BUILDKIT=0
+export COMPOSE_DOCKER_CLI_BUILD=0
+docker --config "${DOCKER_CONFIG}" compose up -d --build
