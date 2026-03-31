@@ -1,11 +1,13 @@
 """Scoring service: orchestrates data fetch, metrics computation, and score persistence."""
 
 import asyncio
+from dataclasses import dataclass
 from datetime import date
 
 import pandas as pd
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.app.db import async_session
 from backend.app.repositories.alert_repo import AlertRepo
 from backend.app.repositories.score_history_repo import ScoreHistoryRepo
 from backend.app.schemas.score import (
@@ -16,11 +18,17 @@ from backend.app.schemas.score import (
 )
 from backend.app.services.market_data_service import MarketDataService
 from backend.core import data as core_data
-from backend.core.metrics import FundamentalMetrics, PriceMetrics, calculate_price_metrics
+from backend.core.metrics import (
+    FundamentalMetrics,
+    PriceMetrics,
+    calculate_price_metrics,
+    calculate_volume_score,
+)
 from backend.core.scoring import build_scores, score_fundamental_from_info
 from backend.core.technical import TechnicalSignals, compute_technical_signals
 
 DEFAULT_USER_ID = 1
+MAX_CONCURRENT_TICKERS = 10
 
 
 def _has_cjk(text: str) -> bool:
@@ -46,6 +54,20 @@ def _normalize_ticker_code(ticker: str) -> str:
     return ticker.split(".")[0].strip().upper()
 
 
+@dataclass
+class _TickerComputeResult:
+    ticker: str
+    price_metrics: PriceMetrics | None = None
+    fundamental: FundamentalMetrics | None = None
+    technical: TechnicalSignals | None = None
+    detail: FundamentalDetail | None = None
+    name: str | None = None
+    name_zh: str | None = None
+    name_en: str | None = None
+    volume_score: float | None = None
+    error: str | None = None
+
+
 class ScoringService:
     def __init__(self, session: AsyncSession):
         self.session = session
@@ -55,74 +77,40 @@ class ScoringService:
 
     async def compute(self, tickers: list[str], profile: str) -> ComputeScoresResponse:
         metrics_list: list[PriceMetrics] = []
-        fundamentals: dict[str, FundamentalMetrics] = []
+        fundamentals: dict[str, FundamentalMetrics] = {}
+        volume_scores: dict[str, float] = {}
         tech_signals: dict[str, TechnicalSignals] = {}
         fundamental_details: list[FundamentalDetail] = []
         errors: list[str] = []
 
-        fundamentals = {}
         ticker_names: dict[str, str] = {}
         ticker_names_zh: dict[str, str] = {}
         ticker_names_en: dict[str, str] = {}
 
-        for t in tickers:
-            try:
-                close_1y = await self.mds.get_close_series(t, "1y")
-                close_3y = await self.mds.get_close_series(t, "3y")
-                pm = calculate_price_metrics(t, close_1y, close_3y)
-                metrics_list.append(pm)
-
-                info = await self.mds.get_ticker_info(t)
-                cached_zh, cached_en, _ = await self.mds.get_ticker_profile(t)
-                if cached_zh and cached_en:
-                    name_zh, name_en = cached_zh, cached_en
-                else:
-                    name_zh, name_en = _resolve_localized_names(t, info)
-
-                    # Extra fallback for Chinese name from TWSE OpenAPI.
-                    if not _has_cjk(name_zh):
-                        twse_map = await asyncio.to_thread(core_data.fetch_twse_name_map)
-                        twse_name = twse_map.get(_normalize_ticker_code(t))
-                        if twse_name:
-                            name_zh = twse_name
-
-                    source = "twse_openapi" if _has_cjk(name_zh) else "yfinance"
-                    await self.mds.upsert_ticker_profile(
-                        ticker=t, name_zh=name_zh, name_en=name_en, source=source
-                    )
-                name = name_zh
-                ticker_names[t] = name
-                ticker_names_zh[t] = name_zh
-                ticker_names_en[t] = name_en
-                fm = score_fundamental_from_info(t, info)
-                fundamentals[t] = fm
-                fundamental_details.append(FundamentalDetail(
-                    ticker=t,
-                    name=name,
-                    name_zh=name_zh,
-                    name_en=name_en,
-                    quote_type=fm.quote_type,
-                    pe=fm.pe,
-                    pb=fm.pb,
-                    dividend_yield=fm.dividend_yield,
-                    roe=fm.roe,
-                    debt_to_equity=fm.debt_to_equity,
-                    expense_ratio=fm.expense_ratio,
-                    total_assets=fm.total_assets,
-                    score=fm.score,
-                ))
-
-                # Technical signals for alert evaluation
-                ohlc = await self.mds.get_ohlc(t, "1y")
-                tech_signals[t] = compute_technical_signals(t, ohlc)
-
-            except Exception as exc:
-                errors.append(f"{t}: {exc}")
+        semaphore = asyncio.Semaphore(MAX_CONCURRENT_TICKERS)
+        results = await asyncio.gather(
+            *(self._compute_single_ticker(t, semaphore) for t in tickers)
+        )
+        for res in results:
+            if res.error:
+                errors.append(res.error)
+                continue
+            if not res.price_metrics or not res.fundamental or not res.technical or not res.detail:
+                errors.append(f"{res.ticker}: incomplete computation result")
+                continue
+            metrics_list.append(res.price_metrics)
+            fundamentals[res.ticker] = res.fundamental
+            tech_signals[res.ticker] = res.technical
+            fundamental_details.append(res.detail)
+            volume_scores[res.ticker] = float(res.volume_score if res.volume_score is not None else 50.0)
+            ticker_names[res.ticker] = res.name or res.ticker
+            ticker_names_zh[res.ticker] = res.name_zh or res.ticker
+            ticker_names_en[res.ticker] = res.name_en or res.ticker
 
         if not metrics_list:
             return ComputeScoresResponse(scores=[], fundamentals=[], triggered_alerts=[], errors=errors)
 
-        scored_df = build_scores(metrics_list, fundamentals, profile)
+        scored_df = build_scores(metrics_list, fundamentals, volume_scores, profile)
 
         # Persist score history
         today = date.today()
@@ -152,6 +140,7 @@ class ScoringService:
                 total_score=round(float(row["total_score"]), 2),
                 fundamental=round(float(row["fundamental"]), 2),
                 price_score=round(float(row["price_score"]), 2),
+                volume_score=round(float(row.get("volume_score", 50.0)), 2),
                 recommendation=row["recommendation"],
                 ret_1y=round(float(row["ret_1y"]), 4),
                 ret_3y=round(float(row["ret_3y"]), 4),
@@ -172,6 +161,67 @@ class ScoringService:
             triggered_alerts=triggered,
             errors=errors,
         )
+
+    async def _compute_single_ticker(
+        self, ticker: str, semaphore: asyncio.Semaphore
+    ) -> _TickerComputeResult:
+        async with semaphore:
+            try:
+                async with async_session() as session:
+                    mds = MarketDataService(session)
+                    close_1y = await mds.get_close_series(ticker, "1y")
+                    close_3y = await mds.get_close_series(ticker, "3y")
+                    price_metrics = calculate_price_metrics(ticker, close_1y, close_3y)
+
+                    info = await mds.get_ticker_info(ticker)
+                    cached_zh, cached_en, _ = await mds.get_ticker_profile(ticker)
+                    if cached_zh and cached_en:
+                        name_zh, name_en = cached_zh, cached_en
+                    else:
+                        name_zh, name_en = _resolve_localized_names(ticker, info)
+                        if not _has_cjk(name_zh):
+                            twse_map = await asyncio.to_thread(core_data.fetch_twse_name_map)
+                            twse_name = twse_map.get(_normalize_ticker_code(ticker))
+                            if twse_name:
+                                name_zh = twse_name
+                        source = "twse_openapi" if _has_cjk(name_zh) else "yfinance"
+                        await mds.upsert_ticker_profile(
+                            ticker=ticker, name_zh=name_zh, name_en=name_en, source=source
+                        )
+
+                    fundamental = score_fundamental_from_info(ticker, info)
+                    detail = FundamentalDetail(
+                        ticker=ticker,
+                        name=name_zh,
+                        name_zh=name_zh,
+                        name_en=name_en,
+                        quote_type=fundamental.quote_type,
+                        pe=fundamental.pe,
+                        pb=fundamental.pb,
+                        dividend_yield=fundamental.dividend_yield,
+                        roe=fundamental.roe,
+                        debt_to_equity=fundamental.debt_to_equity,
+                        expense_ratio=fundamental.expense_ratio,
+                        total_assets=fundamental.total_assets,
+                        score=fundamental.score,
+                    )
+                    ohlc = await mds.get_ohlc(ticker, "1y")
+                    technical = compute_technical_signals(ticker, ohlc)
+                    volume_score = calculate_volume_score(ohlc)
+
+                    return _TickerComputeResult(
+                        ticker=ticker,
+                        price_metrics=price_metrics,
+                        fundamental=fundamental,
+                        technical=technical,
+                        detail=detail,
+                        name=name_zh,
+                        name_zh=name_zh,
+                        name_en=name_en,
+                        volume_score=volume_score,
+                    )
+            except Exception as exc:
+                return _TickerComputeResult(ticker=ticker, error=f"{ticker}: {exc}")
 
     async def _evaluate_alerts(
         self, scored_df: pd.DataFrame, tech_signals: dict[str, TechnicalSignals]

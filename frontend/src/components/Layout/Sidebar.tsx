@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Button, Divider, Input, Radio, Select, Typography } from "antd";
-import { QuestionCircleOutlined } from "@ant-design/icons";
+import { Button, Card, Divider, Input, Radio, Select, Typography } from "antd";
+import { AppstoreAddOutlined, InboxOutlined, QuestionCircleOutlined } from "@ant-design/icons";
 import { useStore } from "../../hooks/useStore";
 import { computeScores } from "../../api/scores";
 import { fetchIndustries } from "../../api/industries";
@@ -10,23 +10,36 @@ import { useT } from "../../i18n";
 
 const { Text } = Typography;
 
-export default function Sidebar() {
+interface SidebarProps {
+  industriesVersion?: number;
+}
+
+export default function Sidebar({ industriesVersion = 0 }: SidebarProps) {
   const {
     tickers, setTickers,
     profile, setProfile,
     backtestMonths, setBacktestMonths,
     setScoreData, setLoading, loading,
     language, setLanguage,
+    setActiveTab,
   } = useStore();
   const [faqOpen, setFaqOpen] = useState(false);
+  const [toolHovered, setToolHovered] = useState(false);
   const [industries, setIndustries] = useState<Industry[]>([]);
+  const [selectedIndustry, setSelectedIndustry] = useState<string | undefined>(undefined);
   const t = useT();
 
   useEffect(() => {
     fetchIndustries()
-      .then(setIndustries)
+      .then((data) => {
+        setIndustries(data);
+        if (!data.length) return;
+        const defaultIndustry = data.find((i) => i.name === "台股排行") ?? data[0];
+        setSelectedIndustry(defaultIndustry.name);
+        setTickers(defaultIndustry.tickers.join(","));
+      })
       .catch((e) => console.error("Failed to load industries:", e));
-  }, []);
+  }, [industriesVersion, setTickers]);
 
   const handleCompute = async () => {
     const tickerList = tickers
@@ -48,6 +61,7 @@ export default function Sidebar() {
   return (
     <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 16, height: "100%" }}>
       <Text strong style={{ fontSize: 16 }}>{t("sidebar.title")}</Text>
+      <Text type="secondary" strong>{t("sidebar.section.analysis")}</Text>
 
       <div>
         <Text type="secondary">{t("sidebar.language")}</Text>
@@ -84,10 +98,12 @@ export default function Sidebar() {
       <div>
         <Text type="secondary">{t("sidebar.industryLabel")}</Text>
         <Select
+          value={selectedIndustry}
           style={{ width: "100%" }}
           placeholder={t("sidebar.industryPlaceholder")}
           allowClear
           onChange={(v) => {
+            setSelectedIndustry(v);
             const selected = industries.find((i) => i.name === v);
             if (selected) {
               setTickers(selected.tickers.join(","));
@@ -115,6 +131,47 @@ export default function Sidebar() {
       <Button type="primary" block loading={loading} onClick={handleCompute}>
         {t("sidebar.compute")}
       </Button>
+
+      <Divider style={{ margin: "4px 0" }} />
+      <Text type="secondary" strong>{t("sidebar.section.tools")}</Text>
+      <Card
+        size="small"
+        hoverable
+        onMouseEnter={() => setToolHovered(true)}
+        onMouseLeave={() => setToolHovered(false)}
+        style={{
+          borderColor: toolHovered ? "#1677ff" : undefined,
+          transition: "border-color 0.2s ease, box-shadow 0.2s ease",
+        }}
+        styles={{ body: { padding: 12 } }}
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <AppstoreAddOutlined style={{ color: toolHovered ? "#1677ff" : "#999" }} />
+            <Text strong>{t("sidebar.industryConfigShortcut")}</Text>
+          </div>
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            {t("sidebar.industryConfigShortcutDesc")}
+          </Text>
+          <Button block onClick={() => setActiveTab("industryConfig")}>
+            {t("sidebar.openTool")}
+          </Button>
+        </div>
+      </Card>
+      <Card size="small" styles={{ body: { padding: 12 } }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, opacity: 0.75 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <InboxOutlined style={{ color: "#999" }} />
+            <Text strong>{t("sidebar.toolsComingSoonTitle")}</Text>
+          </div>
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            {t("sidebar.toolsComingSoonDesc")}
+          </Text>
+          <Button block disabled>
+            {t("sidebar.comingSoon")}
+          </Button>
+        </div>
+      </Card>
 
       <div style={{ marginTop: "auto" }}>
         <Divider style={{ margin: "8px 0" }} />

@@ -16,6 +16,7 @@ export default function AdvancedTab({ scores, fundamentals }: Props) {
     { title: "股票", key: "stock", render: (_: unknown, row: ScoredTicker) => `${getStockName(row)} (${row.ticker})` },
     { title: "基本面分", dataIndex: "fundamental", render: asRatio },
     { title: "價格分", dataIndex: "price_score", render: asRatio },
+    { title: "量能分", dataIndex: "volume_score", render: asRatio },
     { title: "報酬1Y", dataIndex: "ret_1y", render: asPct },
     { title: "報酬3Y", dataIndex: "ret_3y", render: asPct },
     { title: "波動1Y", dataIndex: "vol_1y", render: asPct },

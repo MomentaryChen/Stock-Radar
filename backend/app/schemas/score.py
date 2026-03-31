@@ -15,6 +15,7 @@ class ScoredTicker(BaseModel):
     total_score: float
     fundamental: float
     price_score: float
+    volume_score: float
     recommendation: str
     ret_1y: float
     ret_3y: float

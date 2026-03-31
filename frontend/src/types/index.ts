@@ -7,6 +7,7 @@ export interface ScoredTicker {
   total_score: number;
   fundamental: number;
   price_score: number;
+  volume_score: number;
   recommendation: string;
   ret_1y: number;
   ret_3y: number;

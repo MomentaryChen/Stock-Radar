@@ -75,6 +75,7 @@ def summarize_recommendation(total_score: float) -> str:
 def build_scores(
     metrics_list: List[PriceMetrics],
     fundamentals: Dict[str, FundamentalMetrics],
+    volume_scores: Dict[str, float],
     profile: str,
 ) -> pd.DataFrame:
     rows = []
@@ -94,6 +95,7 @@ def build_scores(
                 "trend_1y": m.trend_1y,
                 "trend_3y": m.trend_3y,
                 "fundamental": fundamentals[m.ticker].score if m.ticker in fundamentals else 55.0,
+                "volume_score": volume_scores.get(m.ticker, 50.0),
             }
         )
 
@@ -112,7 +114,7 @@ def build_scores(
     df["s_trend_1y"] = df["trend_1y"] * 100.0
     df["s_trend_3y"] = df["trend_3y"] * 100.0
 
-    df["price_score"] = (
+    base_price_score = (
         0.15 * df["s_ret_1y"]
         + 0.25 * df["s_ret_3y"]
         + 0.07 * df["s_vol_1y"]
@@ -124,6 +126,7 @@ def build_scores(
         + 0.03 * df["s_trend_1y"]
         + 0.03 * df["s_trend_3y"]
     )
+    df["price_score"] = 0.90 * base_price_score + 0.10 * df["volume_score"]
 
     weight = PROFILE_WEIGHTS[profile]
     df["total_score"] = weight["fundamental"] * df["fundamental"] + weight["price"] * df["price_score"]

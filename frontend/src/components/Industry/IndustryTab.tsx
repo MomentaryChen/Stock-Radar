@@ -6,7 +6,11 @@ import { computeScores } from "../../api/scores";
 import type { Industry, ScoredTicker } from "../../types";
 import { useStore } from "../../hooks/useStore";
 
-export default function IndustryTab() {
+interface IndustryTabProps {
+  industriesVersion?: number;
+}
+
+export default function IndustryTab({ industriesVersion = 0 }: IndustryTabProps) {
   const profile = useStore((s) => s.profile);
   const [industries, setIndustries] = useState<Industry[]>([]);
   const [selected, setSelected] = useState<string>("");
@@ -17,9 +21,11 @@ export default function IndustryTab() {
   useEffect(() => {
     fetchIndustries().then((d) => {
       setIndustries(d);
-      if (d.length) setSelected(d[0].name);
+      if (!d.length) return;
+      const defaultIndustry = d.find((i) => i.name === "台股排行") ?? d[0];
+      setSelected(defaultIndustry.name);
     });
-  }, []);
+  }, [industriesVersion]);
 
   useEffect(() => {
     const ind = industries.find((i) => i.name === selected);

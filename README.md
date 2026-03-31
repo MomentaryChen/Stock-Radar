@@ -1,83 +1,125 @@
 # Stock Radar
 
-Quantitative scoring and recommendation system for Taiwan stocks (TWSE/TPEx), built with FastAPI + React + PostgreSQL.
+A quantitative scoring and analytics platform for Taiwan stocks (TWSE/TPEx), built with FastAPI, React, and PostgreSQL.
 
-[中文版 README](README.zh-TW.md)
+[繁體中文 README](README.zh-TW.md)
 
 ## Features
 
-- Enter Taiwan stock tickers to automatically fetch fundamentals and historical prices
-- Calculate returns, volatility, max drawdown, Sharpe ratio, and moving average trends
-- Fundamental scoring (different weights for stocks vs ETFs)
-- Technical indicator analysis (RSI, MACD, KD)
-- 3-day probability forecast (Monte Carlo simulation)
-- Backtest analysis (equal-weight portfolio vs 0050 benchmark)
-- Industry comparison (semiconductor, finance, traditional, electronic components, ETF)
-- Watchlist management
-- Alert condition configuration
+- Fundamental + technical analysis for Taiwan stocks and ETFs
+- Quant metrics: return, volatility, max drawdown, Sharpe, moving-average trend
+- Technical indicators: RSI, MACD, KD
+- 3-day probability forecast with Monte Carlo simulation
+- Portfolio backtest (equal-weight portfolio vs 0050 benchmark)
+- Industry comparison, watchlist management, and alert configuration
 - Switchable investment styles: conservative / balanced / aggressive
 
-## Architecture
+## Project Structure
 
-```
+```text
 stock-radar/
-├── backend/          # FastAPI + SQLAlchemy + PostgreSQL
-│   ├── app/          # API (routers, services, repositories, models, schemas)
-│   └── core/         # Pure computation modules (metrics, scoring, technical, backtest)
-├── frontend/         # React + TypeScript + Ant Design + Recharts
-│   └── src/
-│       ├── api/      # API client
-│       ├── components/  # UI components (8 tabs)
-│       └── hooks/    # Zustand store
-└── infra/            # Docker Compose (PostgreSQL + Backend + Frontend)
+├── backend/            # FastAPI + SQLAlchemy + Alembic
+│   ├── app/            # API routers/services/repositories/models/schemas
+│   └── core/           # Pure calculation modules
+├── frontend/           # React + TypeScript + Vite + Ant Design
+├── infra/              # Docker Compose for postgres/backend/frontend
+└── buildAndStart.ps1   # One-command Docker startup script
 ```
 
-## Quick Start
+## Prerequisites
 
-### Docker Compose (Recommended)
+- Docker Desktop (recommended path)
+- Node.js 20+
+- Python 3.11+
+
+## Quick Start (Docker, Recommended)
+
+1) Create `.env` from the template:
 
 ```bash
-# 1. Create environment variables
+# macOS/Linux
 cp .env.example .env
-
-# 2. Start all services
-cd infra && docker compose up -d
-
-# 3. Open browser
-# Frontend: http://localhost:5173
-# Backend API docs: http://localhost:8000/docs
 ```
 
-### Local Development
+```powershell
+# Windows PowerShell
+Copy-Item .env.example .env
+```
+
+2) Start all services:
+
+```powershell
+# Option A: from repository root
+./buildAndStart.ps1
+```
 
 ```bash
-# Backend
-pip install -e "./backend"
-cd infra && docker compose up -d postgres    # Start DB only
-alembic -c backend/alembic.ini upgrade head  # Run migrations
-uvicorn backend.app.main:app --reload
+# Option B: manual compose command
+cd infra && docker compose up -d --build
+```
 
-# Frontend
-cd frontend && npm install && npm run dev
+3) Open:
+
+- Frontend: `http://localhost:5173`
+- Backend OpenAPI docs: `http://localhost:8000/docs`
+
+## Local Development (Without Full Docker Stack)
+
+Use this flow if you want hot-reload for backend/frontend while only running PostgreSQL in Docker.
+
+### 1) Start PostgreSQL only
+
+```bash
+cd infra && docker compose up -d postgres
+```
+
+### 2) Backend
+
+```bash
+pip install -e "./backend"
+alembic -c backend/alembic.ini upgrade head
+uvicorn backend.app.main:app --reload
+```
+
+### 3) Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+## Useful Commands
+
+```bash
+# Stop all containers
+cd infra && docker compose down
+
+# View container logs
+cd infra && docker compose logs -f backend
+cd infra && docker compose logs -f frontend
+
+# Re-run database migrations
+alembic -c backend/alembic.ini upgrade head
 ```
 
 ## API Endpoints
 
 | Method | Path | Description |
 |--------|------|-------------|
-| POST | `/api/v1/scores/compute` | Compute scores |
+| POST | `/api/v1/scores/compute` | Compute stock scores |
 | POST | `/api/v1/technical/batch` | Batch technical indicators |
-| GET | `/api/v1/technical/{ticker}` | Single stock technical chart |
-| POST | `/api/v1/forecast/batch` | 3-day forecast |
-| POST | `/api/v1/backtest` | Backtest analysis |
-| GET | `/api/v1/charts/price` | Price / drawdown charts |
+| GET | `/api/v1/technical/{ticker}` | Single ticker technical chart |
+| POST | `/api/v1/forecast/batch` | 3-day probability forecast |
+| POST | `/api/v1/backtest` | Portfolio backtest |
+| GET | `/api/v1/charts/price` | Price / drawdown chart data |
 | GET | `/api/v1/industries` | Industry list |
 | CRUD | `/api/v1/watchlists` | Watchlist management |
 | CRUD | `/api/v1/alerts` | Alert configuration |
 
-## Data Migration (from legacy Streamlit version)
+## Data Migration (Legacy Streamlit)
 
-If you have a JSON export from the old localStorage:
+If you have JSON exported from the old localStorage version:
 
 ```bash
 python -m backend.scripts.migrate_localstorage export.json
@@ -85,10 +127,10 @@ python -m backend.scripts.migrate_localstorage export.json
 
 ## Notes
 
-- Data sourced from Yahoo Finance; may have delays or temporary gaps
-- Market data cached for 30 minutes; fundamental data cached for 24 hours
-- This tool is for research and reference only; it does not constitute investment advice
+- Data source: Yahoo Finance (delays or temporary gaps may occur)
+- Cache policy: market data 30 minutes, fundamentals 24 hours
+- For research/reference only; this project is not investment advice
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE).
+Licensed under the [MIT License](LICENSE).
