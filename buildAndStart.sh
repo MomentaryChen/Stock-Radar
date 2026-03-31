@@ -30,7 +30,14 @@ if [ "${DEPLOY_ENV}" = "prod" ]; then
   docker --config "${DOCKER_CONFIG}" pull certbot/certbot:latest
 fi
 
-echo "[buildAndStart] Starting services with compose..."
+echo "[buildAndStart] Stopping running services before build..."
+if [ "${DEPLOY_ENV}" = "prod" ]; then
+  docker --config "${DOCKER_CONFIG}" compose --profile prod down --remove-orphans
+else
+  docker --config "${DOCKER_CONFIG}" compose down --remove-orphans
+fi
+
+echo "[buildAndStart] Building and starting services with compose..."
 if [ "${DEPLOY_ENV}" = "prod" ]; then
   docker --config "${DOCKER_CONFIG}" compose --profile prod up -d --build --remove-orphans
 else
