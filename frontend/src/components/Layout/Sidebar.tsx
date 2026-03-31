@@ -1,20 +1,14 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button, Divider, Input, Radio, Select, Typography } from "antd";
 import { QuestionCircleOutlined } from "@ant-design/icons";
 import { useStore } from "../../hooks/useStore";
 import { computeScores } from "../../api/scores";
+import { fetchIndustries } from "../../api/industries";
+import type { Industry } from "../../types";
 import FaqDrawer from "./FaqDrawer";
 import { useT } from "../../i18n";
 
 const { Text } = Typography;
-
-const INDUSTRY_MAP: Record<string, string> = {
-  半導體: "2330,2303,2454,3711",
-  金融: "2881,2882,2884,2886",
-  傳產: "1301,1303,2002,1326",
-  電子零組件: "2317,2382,3008",
-  ETF: "0050,0056,00878,00882",
-};
 
 export default function Sidebar() {
   const {
@@ -25,7 +19,14 @@ export default function Sidebar() {
     language, setLanguage,
   } = useStore();
   const [faqOpen, setFaqOpen] = useState(false);
+  const [industries, setIndustries] = useState<Industry[]>([]);
   const t = useT();
+
+  useEffect(() => {
+    fetchIndustries()
+      .then(setIndustries)
+      .catch((e) => console.error("Failed to load industries:", e));
+  }, []);
 
   const handleCompute = async () => {
     const tickerList = tickers
@@ -86,8 +87,13 @@ export default function Sidebar() {
           style={{ width: "100%" }}
           placeholder={t("sidebar.industryPlaceholder")}
           allowClear
-          onChange={(v) => v && setTickers(INDUSTRY_MAP[v])}
-          options={Object.keys(INDUSTRY_MAP).map((k) => ({ label: k, value: k }))}
+          onChange={(v) => {
+            const selected = industries.find((i) => i.name === v);
+            if (selected) {
+              setTickers(selected.tickers.join(","));
+            }
+          }}
+          options={industries.map((i) => ({ label: i.name, value: i.name }))}
         />
       </div>
 
