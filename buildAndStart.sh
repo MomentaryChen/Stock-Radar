@@ -10,4 +10,11 @@ if [ ! -d "${INFRA_PATH}" ]; then
 fi
 
 cd "${INFRA_PATH}"
+# Use a local Docker config fallback on headless Linux hosts
+# to avoid credential helper failures (e.g. secretservice DBus).
+export DOCKER_CONFIG="${DOCKER_CONFIG:-/tmp/docker-nokeyring}"
+mkdir -p "${DOCKER_CONFIG}"
+if [ ! -f "${DOCKER_CONFIG}/config.json" ]; then
+  printf '{"auths":{}}\n' > "${DOCKER_CONFIG}/config.json"
+fi
 docker compose up -d --build
