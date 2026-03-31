@@ -71,6 +71,25 @@ cd infra && docker compose up -d --build
 - 前端：`http://localhost:5173`
 - 後端 OpenAPI 文件：`http://localhost:8000/docs`
 
+## Nginx + HTTPS（Let’s Encrypt 自動續約）
+
+目前 compose 已包含 `nginx` 與 `certbot`：
+
+- `http://stock-radar.ddns.net` 會自動轉址到 HTTPS
+- `https://stock-radar.ddns.net` 反向代理到前端
+- `/api/*` 由 Nginx 轉發到後端
+- `certbot` 每 12 小時執行一次 `renew`
+
+首次簽發憑證（只需執行一次）：
+
+```bash
+cd infra
+chmod +x ./init-letsencrypt.sh
+DOMAIN_NAME=stock-radar.ddns.net CERTBOT_EMAIL=you@example.com ./init-letsencrypt.sh
+```
+
+> 請先確認 DNS `stock-radar.ddns.net` 已正確指向你的主機公網 IP，且 80/443 埠可從外網連線。
+
 ## 本地開發（不跑整套 Docker）
 
 如果你希望後端 / 前端各自熱更新，建議只用 Docker 跑 PostgreSQL。

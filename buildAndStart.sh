@@ -24,6 +24,8 @@ echo "[buildAndStart] Pulling base images..."
 docker --config "${DOCKER_CONFIG}" pull postgres:16-alpine
 docker --config "${DOCKER_CONFIG}" pull python:3.11-slim
 docker --config "${DOCKER_CONFIG}" pull node:20-alpine
+docker --config "${DOCKER_CONFIG}" pull nginx:1.27-alpine
+docker --config "${DOCKER_CONFIG}" pull certbot/certbot:latest
 
 echo "[buildAndStart] Starting services with compose..."
 docker --config "${DOCKER_CONFIG}" compose up -d --build --remove-orphans
