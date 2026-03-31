@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Select, Spin } from "antd";
+import { Select, Spin, Segmented, Typography } from "antd";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { fetchIndustries } from "../../api/industries";
 import { computeScores } from "../../api/scores";
@@ -11,6 +11,7 @@ export default function IndustryTab() {
   const [industries, setIndustries] = useState<Industry[]>([]);
   const [selected, setSelected] = useState<string>("");
   const [scores, setScores] = useState<ScoredTicker[]>([]);
+  const [visibleCount, setVisibleCount] = useState<number>(10);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -29,7 +30,9 @@ export default function IndustryTab() {
       .finally(() => setLoading(false));
   }, [selected, profile]);
 
-  const chartData = scores.map((s) => ({
+  const sortedScores = [...scores].sort((a, b) => b.total_score - a.total_score);
+  const visibleScores = sortedScores.slice(0, visibleCount);
+  const chartData = visibleScores.map((s) => ({
     stock: `${s.name_zh || s.name_en || s.name || s.ticker} (${s.ticker})`,
     ticker: s.ticker,
     基本面: s.fundamental,
@@ -45,16 +48,31 @@ export default function IndustryTab() {
         options={industries.map((i) => ({ label: i.name, value: i.name }))}
         style={{ width: 200, marginBottom: 16 }}
       />
+      <div style={{ marginBottom: 12 }}>
+        <Typography.Text type="secondary" style={{ marginRight: 8 }}>
+          顯示筆數
+        </Typography.Text>
+        <Segmented<number>
+          value={visibleCount}
+          onChange={setVisibleCount}
+          options={[
+            { label: "Top 5", value: 5 },
+            { label: "Top 10", value: 10 },
+            { label: "Top 15", value: 15 },
+            { label: "Top 20", value: 20 },
+          ]}
+        />
+      </div>
 
       {loading ? (
         <Spin />
       ) : (
         <>
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height={Math.max(320, visibleScores.length * 36)}>
             <BarChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="stock" interval={0} angle={-15} textAnchor="end" height={70} />
-              <YAxis />
+              <XAxis dataKey="stock" interval={0} angle={-15} textAnchor="end" height={80} />
+              <YAxis width={60} />
               <Tooltip />
               <Legend />
               <Bar dataKey="基本面" fill="#1890ff" />

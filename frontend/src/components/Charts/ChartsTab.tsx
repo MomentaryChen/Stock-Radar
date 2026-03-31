@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Spin, Typography } from "antd";
+import { Select, Spin, Typography } from "antd";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { fetchPriceCharts } from "../../api/charts";
 import type { PriceChartData } from "../../api/charts";
@@ -13,6 +13,7 @@ interface Props {
 
 export default function ChartsTab({ tickers, tickerNameMap }: Props) {
   const [data, setData] = useState<PriceChartData | null>(null);
+  const [selectedTickers, setSelectedTickers] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -21,11 +22,15 @@ export default function ChartsTab({ tickers, tickerNameMap }: Props) {
     fetchPriceCharts(tickers).then(setData).finally(() => setLoading(false));
   }, [tickers]);
 
+  useEffect(() => {
+    setSelectedTickers(tickers.slice(0, Math.min(6, tickers.length)));
+  }, [tickers]);
+
   if (loading) return <Spin />;
   if (!data) return null;
 
-  const priceKeys = Object.keys(data.price);
-  const ddKeys = Object.keys(data.drawdown);
+  const priceKeys = Object.keys(data.price).filter((k) => selectedTickers.includes(k));
+  const ddKeys = Object.keys(data.drawdown).filter((k) => selectedTickers.includes(k));
 
   // Merge all tickers into one dataset keyed by date
   const mergeSeries = (series: Record<string, { date: string; value: number }[]>) => {
@@ -47,6 +52,23 @@ export default function ChartsTab({ tickers, tickerNameMap }: Props) {
 
   return (
     <div>
+      <Typography.Text type="secondary">
+        為避免 20 檔同時顯示造成可讀性下降，預設顯示前 6 檔，可自行切換。
+      </Typography.Text>
+      <div style={{ margin: "8px 0 16px" }}>
+        <Select
+          mode="multiple"
+          maxTagCount="responsive"
+          style={{ width: "100%" }}
+          value={selectedTickers}
+          onChange={(values) => setSelectedTickers(values.slice(0, 6))}
+          placeholder="選擇要顯示的股票（最多 6 檔）"
+          options={tickers.map((ticker) => ({
+            label: `${tickerNameMap[ticker] ?? ticker} (${ticker})`,
+            value: ticker,
+          }))}
+        />
+      </div>
       <Typography.Text strong>3 年標準化價格（起點 = 100）</Typography.Text>
       <ResponsiveContainer width="100%" height={300}>
         <LineChart data={priceData}>
